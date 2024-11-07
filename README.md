@@ -9,11 +9,10 @@ Advanced phishing tool with ngrok integration to create phishing pages disguised
 ```bash
 # Install required dependencies
 pkg update && pkg upgrade
-pkg install python git
+pkg install python3 git
 
 # Clone repository
-git clone https://github.com/username/phishing-generator
-cd phishing-generator
+git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
 
 # Install Python requirements
 pip install -r requirements.txt
@@ -28,9 +27,7 @@ sudo apt update && sudo apt upgrade
 sudo apt install python3 python3-pip git
 
 # Clone repository 
-git clone https://github.com/username/phishing-generator
-cd phishing-generator
-
+git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
 # Install Python requirements
 pip3 install -r requirements.txt
 ```
@@ -93,4 +90,6 @@ pip install -r requirements.txt --upgrade
 
 
 # Remember to star ⭐ the repository if you find it useful!
+
+## Preview
 
