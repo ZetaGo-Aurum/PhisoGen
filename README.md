@@ -99,3 +99,5 @@ pip install -r requirements.txt --upgrade
 
 ![preview3](https://github.com/ZetaGo-Aurum/PhisoGen/blob/main/Preview/Screenshot%202024-11-07%20182809.png)
 
+![preview4](https://github.com/ZetaGo-Aurum/PhisoGen/blob/main/Preview/Screenshot%202024-11-07%20182914.png)
+
