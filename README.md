@@ -103,3 +103,6 @@ pip install -r requirements.txt --upgrade
 
 ![preview5](https://github.com/ZetaGo-Aurum/PhisoGen/blob/main/Preview/Screenshot%202024-11-07%20182938.png)
 
+## Warning: NGROK AUTHTOKEN REQUIRED
+
+### NGROK Link : <a href="https://ngrok.com/">https://ngrok.com/</a>
