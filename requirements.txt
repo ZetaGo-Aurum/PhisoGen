@@ -1,0 +1,7 @@
+flask
+requests
+pyshorteners
+pyngrok
+rich
+beautifulsoup4
+PyJWT
