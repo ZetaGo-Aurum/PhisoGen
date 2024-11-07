@@ -37,10 +37,10 @@ pip3 install -r requirements.txt
 1. Run the script:
 ```bash
 # On Termux
-python phising-maker.py
+python3 start.py
 
 # On Linux
-python3 phising-maker.py
+python3 start.py
 ```
 
 2. Select preferred language (English/Indonesia)
