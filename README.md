@@ -23,10 +23,6 @@ pip3 install -r requirements.txt
 
 1. Run the script:
 ```bash
-# On Termux
-python3 start.py
-
-# On Linux
 python3 start.py
 ```
 
