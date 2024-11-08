@@ -5,19 +5,6 @@ Phising Generator
 
 Advanced phishing tool with ngrok integration to create phishing pages disguised as target websites.
 
-## 📱 Termux Installation
-```bash
-# Install required dependencies
-pkg update && pkg upgrade
-pkg install python3 git
-
-# Clone repository
-git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
-
-# Install Python requirements
-pip install -r requirements.txt
-```
-
 ## 💻 Linux Installation (Ubuntu/Debian)
 ```bash
 # Update system
@@ -74,7 +61,7 @@ This tool is created for educational and security testing purposes only. Any ill
 
 ## 📱 Compatibility
 
-- Android (Termux)
+- Android-Userland (Ubuntu/Debian)
 - Linux (Ubuntu/Debian)
 - Windows (WSL)
 - macOS
