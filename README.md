@@ -16,6 +16,7 @@ sudo apt install python3 python3-pip git
 # Clone repository 
 git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
 # Install Python requirements
+cd PhisoGen
 pip3 install -r requirements.txt
 ```
 
