@@ -32,9 +32,12 @@
 | 📸 **Camera Phishing** | Access victim's camera (with permission) |
 | 📁 **File Phishing** | Retrieve files from the target |
 | 📋 **Clipboard Phishing** | Capture clipboard data in real-time |
+| 🎯📸 **Combo Phishing** | Location + Camera simultaneously |
+| 🖱️ **Clickjack Phishing** | Fake download/getlink trap |
+| 🔐 **Google Auth Phishing** | Fake Google 2FA verification page |
 | 🖥️ **Device Info** | Auto-collect browser/OS/screen fingerprint |
-| 🔗 **URL Shortener** | Auto-shorten & mask links (TinyURL, is.gd, da.gd) |
-| 🌐 **Ngrok Tunnel** | Auto-download + auto-setup — custom region & port |
+| 🔗 **URL Shortener** | Auto-shorten & mask links (is.gd, da.gd, TinyURL) |
+| 🌐 **Ngrok / Pinggy / Cloudflare** | 3 tunnel engines — choose your preference |
 | 🔄 **Session Persistence** | Token & settings saved — input once, use many |
 | 📢 **Discord Webhook** | Auto-send captured data to Discord channel |
 | 📊 **Real-time Monitor** | Live victim data dashboard |
@@ -118,10 +121,13 @@ python3 start.py
 | 3 | 📸 Camera Phishing | Access victim's camera |
 | 4 | 📁 File Phishing | Retrieve files |
 | 5 | 📋 Clipboard Phishing | Capture clipboard data |
-| 6 | 📊 View Results | Live victim data dashboard |
-| 7 | 📦 Export Data | Export results to JSON |
-| 8 | ⚙️ Settings | Webhook, region, port config |
-| 9 | ❌ Exit | Close program |
+| 6 | 🎯📸 Combo Phishing | Location + Camera at once |
+| 7 | 🖱️ Clickjack Phishing | Fake download/getlink trap |
+| 8 | 🔐 Google Auth | Fake Google 2FA page |
+| 9 | 📊 View Results | Live victim data dashboard |
+| 10 | 📦 Export Data | Export results to JSON |
+| 11 | ⚙️ Settings | Webhook, region, port, tunnel config |
+| 12 | ❌ Exit | Close program |
 
 ### Captured Data
 
@@ -145,17 +151,27 @@ Access via menu option **8**:
 
 ---
 
-## 🔧 Ngrok
+## 🔧 Tunnel Engines
+
+Choose between 3 engines on startup or via Settings:
+
+| Engine | Auth Needed | Type | 
+|--------|------------|------|
+| **Ngrok** | Token (session-saved) | Legacy, feature-rich |
+| **Pinggy** 🔥 | **None** | SSH-based, fast, no redirect |
+| **Cloudflare** | Token (session-saved) | Docker-like, stable |
 
 ### Auto-Install
-ngrok binary is **automatically downloaded** on first run if not found.  
+Ngrok binary is **automatically downloaded** on first run if not found.  
 Supported: Linux (x86_64, arm64, arm, i386), macOS (Intel & Apple Silicon), Termux (aarch64, arm), Windows (WSL).
 
-### Auth Token
-Get your free auth token at: [https://dashboard.ngrok.com](https://dashboard.ngrok.com)
+Pinggy only needs `ssh` (pre-installed on all systems).  
+Cloudflare needs `cloudflared` binary.
 
-- Token is stored in `.phishgen_session.json` (automatically git-ignored)
-- Only required **once** — persists until token expires or session file is deleted
+### Auth Tokens
+- **Ngrok**: Get token at [https://dashboard.ngrok.com](https://dashboard.ngrok.com)
+- **Cloudflare**: Get token from Cloudflare Zero Trust dashboard
+- All tokens stored in `.phishgen_session.json` — only required **once**
 
 ---
 
