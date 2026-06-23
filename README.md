@@ -132,12 +132,14 @@ python3 start.py
 
 ### Captured Data
 
+All results are saved to `~/Documents/PhisoGen_Results/` (or `~/storage/documents/PhisoGen_Results/` on Termux).
+
 | Type | Saved to |
 |------|----------|
-| Form/Clipboard/Location data | `phishing_results.txt` |
-| Camera captures | `captured_images/` |
-| Uploaded files | `uploaded_files/` |
-| All data export | `export_<timestamp>.json` |
+| Form/Clipboard/Location data | `PhisoGen_Results/phishing_results.txt` |
+| Camera captures | `PhisoGen_Results/captured_images/` |
+| Uploaded files | `PhisoGen_Results/uploaded_files/` |
+| All data export | `PhisoGen_Results/export_<timestamp>.json` |
 
 ---
 
