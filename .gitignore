@@ -154,6 +154,19 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Session / token files
+.phishgen_session.json
+
+# Logs
+logs/
+*.txt
+
+# Generated files
+captured_images/
+uploaded_files/
+templates/
+Preview/
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
