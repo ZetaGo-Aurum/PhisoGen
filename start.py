@@ -586,30 +586,80 @@ class PhishingGenerator:
             return False
 
     def install_ngrok(self):
-        console.print("[yellow]⬇️ ngrok not found. Downloading automatically...[/]")
+        console.print("[yellow]⬇️ ngrok not found. Installing automatically...[/]")
         system = platform.system().lower()
         machine = platform.machine().lower()
         is_termux = bool(os.environ.get('PREFIX'))
 
+        if is_termux:
+            self._install_ngrok_termux()
+        else:
+            self._install_ngrok_linux(machine, system)
+
+    def _install_ngrok_termux(self):
+        prefix = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
+        share_dir = os.path.join(prefix, 'share', 'ngrok')
+        bin_dir = os.path.join(prefix, 'bin')
+        os.makedirs(share_dir, exist_ok=True)
+
+        try:
+            console.print("[cyan]⟳ Updating Termux packages...[/]")
+            subprocess.run(["pkg", "update", "-y"], capture_output=True, timeout=180)
+            console.print("[cyan]⟳ Installing proot and wget...[/]")
+            subprocess.run(["pkg", "install", "proot", "wget", "resolv-conf", "-y"],
+                           capture_output=True, timeout=180)
+
+            # Detect arch via dpkg
+            result = subprocess.run(["dpkg", "--print-architecture"],
+                                    capture_output=True, text=True, timeout=10)
+            arch = result.stdout.strip()
+            arch_map = {'aarch64': 'arm64', 'arm': 'arm', 'armhf': 'arm',
+                        'amd64': 'amd64', 'i386': '386', 'i686': '386'}
+            ngrok_arch = arch_map.get(arch, 'arm64')
+
+            url = f"https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-{ngrok_arch}.zip"
+            zip_path = os.path.join(share_dir, 'ngrok.zip')
+
+            with console.status("[cyan]Downloading ngrok..."):
+                resp = requests.get(url, timeout=120, stream=True)
+                resp.raise_for_status()
+                with open(zip_path, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk: f.write(chunk)
+
+            with console.status("[cyan]Extracting ngrok..."):
+                with zipfile.ZipFile(zip_path, 'r') as z:
+                    z.extractall(path=share_dir)
+                os.remove(zip_path)
+                os.chmod(os.path.join(share_dir, 'ngrok'), 0o755)
+
+            # Create proot wrapper
+            wrapper = os.path.join(bin_dir, 'ngrok')
+            with open(wrapper, 'w') as f:
+                f.write(f'#!/bin/bash\nexec termux-chroot -- {share_dir}/ngrok "$@"\n')
+            os.chmod(wrapper, 0o755)
+
+            ngrok.set_bin(wrapper)
+            console.print(f"[green]✓ ngrok installed to {wrapper} (wraps {share_dir}/ngrok via proot)[/]")
+
+        except Exception as e:
+            console.print(f"[red]❌ Termux auto-install failed: {str(e)[:100]}[/]")
+            console.print("[yellow]Try: git clone https://github.com/JesusChapman/termux-ngrok && cd termux-ngrok && bash install.sh[/]")
+
+    def _install_ngrok_linux(self, machine, system):
         arch_map = {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64',
                      'arm64': 'arm64', 'armv7l': 'arm', 'arm': 'arm', 'i386': '386', 'i686': '386'}
         arch = arch_map.get(machine, 'amd64')
-
-        if system == 'darwin':
-            os_name, ext = 'darwin', 'tgz'
-        elif system == 'windows' and not is_termux:
-            os_name, ext = 'windows', 'zip'
-        else:
-            os_name, ext = 'linux', 'tgz'
-
+        os_name = 'darwin' if system == 'darwin' else 'linux'
+        ext = 'tgz'
         url = f"https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-{os_name}-{arch}.{ext}"
-        dest = os.environ.get('PREFIX', '/usr/local/bin') if is_termux else '/usr/local/bin'
+        dest = '/usr/local/bin'
         if not os.access(dest, os.W_OK):
             dest = os.path.expanduser('~/.local/bin')
             os.makedirs(dest, exist_ok=True)
 
         try:
-            with console.status(f"[cyan]Downloading ngrok...[/]"):
+            with console.status("[cyan]Downloading ngrok..."):
                 resp = requests.get(url, timeout=120, stream=True)
                 resp.raise_for_status()
                 tarball = f"/tmp/ngrok.{ext}"
@@ -617,13 +667,9 @@ class PhishingGenerator:
                     for chunk in resp.iter_content(chunk_size=8192):
                         if chunk: f.write(chunk)
 
-            with console.status("[cyan]Extracting ngrok...[/]"):
-                if ext == 'tgz':
-                    with tarfile.open(tarball, 'r:gz') as tar:
-                        tar.extractall(path='/tmp')
-                else:
-                    with zipfile.ZipFile(tarball, 'r') as z:
-                        z.extractall(path='/tmp')
+            with console.status("[cyan]Extracting ngrok..."):
+                with tarfile.open(tarball, 'r:gz') as tar:
+                    tar.extractall(path='/tmp')
 
             ngrok_bin = os.path.join(dest, 'ngrok')
             subprocess.run(["mv", "/tmp/ngrok", ngrok_bin], capture_output=True, check=True)
@@ -633,7 +679,6 @@ class PhishingGenerator:
             os.environ.setdefault('PATH', '')
             os.environ['PATH'] = dest + os.pathsep + os.environ['PATH']
             ngrok.set_bin(ngrok_bin)
-
             console.print(f"[green]✓ ngrok installed to {ngrok_bin}[/]")
         except Exception as e:
             console.print(f"[red]❌ Auto-install failed: {str(e)[:80]}[/]")
