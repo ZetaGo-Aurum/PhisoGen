@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🎣 PhisoGen
+# 🎣 PhisoGen v3.0
 
-**Advanced Phishing Framework — Educational Security Testing Tool**
+**Advanced Educational Phishing Framework — By ZetaGo-Aurum**
 
-[![Version](https://img.shields.io/badge/version-2.1-blue?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/version-3.0-blue?style=for-the-badge)]()
 [![Python](https://img.shields.io/badge/Python-3.x-yellow?style=for-the-badge)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Android%20%7C%20macOS%20%7C%20Windows-lightgrey?style=for-the-badge)]()
@@ -28,20 +28,23 @@
 | Feature | Description |
 |---------|-------------|
 | 🎯 **Location Phishing** | Capture target's GPS coordinates |
-| 📝 **Form Phishing** | Deceive login form with credential harvesting |
+| 📝 **Form Phishing** | Fake login form with credential harvesting |
 | 📸 **Camera Phishing** | Access victim's camera (with permission) |
 | 📁 **File Phishing** | Retrieve files from the target |
-| 🔗 **URL Shortener** | Auto-shorten phishing links (TinyURL, is.gd, da.gd) |
-| 🌐 **Ngrok Tunnel** | Secure reverse proxy with public URL |
-| 🔄 **Session Token** | Ngrok token saved — input once, use many times |
-| 🌍 **Multi-language** | English & Bahasa Indonesia |
+| 📋 **Clipboard Phishing** | Capture clipboard data in real-time |
+| 🖥️ **Device Info** | Auto-collect browser/OS/screen fingerprint |
+| 🔗 **URL Shortener** | Auto-shorten links (TinyURL, is.gd, da.gd) |
+| 📱 **QR Code Generator** | Auto-generate QR codes for every link |
+| 🌐 **Ngrok Tunnel** | Secure reverse proxy — custom region & port |
+| 🔄 **Session Persistence** | Token & settings saved — input once, use many |
+| 📢 **Discord Webhook** | Auto-send captured data to Discord channel |
 | 📊 **Real-time Monitor** | Live victim data dashboard |
+| 📦 **Export to JSON** | Export all captured results to JSON file |
+| 🌍 **Multi-language** | English & Bahasa Indonesia |
 
 ---
 
 ## 📦 Installation
-
-### Linux / Termux / macOS
 
 ```bash
 # Clone the repository
@@ -64,17 +67,43 @@ python3 start.py
 
 1. Select language (English / Indonesia)
 2. Enter your **Ngrok Auth Token** (saved to session — only needed once)
-3. Choose attack type from the menu
+3. Choose attack type from menu
 4. Enter target URL to clone
-5. Send the generated phishing link to target
+5. Send the generated phishing link (+ QR code) to target
+
+### Menu Options
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | 🎯 Location Phishing | Get victim's GPS location |
+| 2 | 📝 Form Phishing | Fake login form |
+| 3 | 📸 Camera Phishing | Access victim's camera |
+| 4 | 📁 File Phishing | Retrieve files |
+| 5 | 📋 Clipboard Phishing | Capture clipboard data |
+| 6 | 📊 View Results | Live victim data dashboard |
+| 7 | 📦 Export Data | Export results to JSON |
+| 8 | ⚙️ Settings | Webhook, region, port config |
+| 9 | ❌ Exit | Close program |
 
 ### Captured Data
 
 | Type | Saved to |
 |------|----------|
-| Form data | `phishing_results.txt` |
+| Form/Clipboard/Location data | `phishing_results.txt` |
 | Camera captures | `captured_images/` |
 | Uploaded files | `uploaded_files/` |
+| All data export | `export_<timestamp>.json` |
+
+---
+
+## ⚙️ Settings
+
+Access via menu option **8**:
+
+- **Ngrok Region** — Choose server region (US, EU, AP, AU, SA, JP, IN)
+- **Server Port** — Custom port (default: 5000)
+- **Discord Webhook** — Set webhook URL to auto-receive captured data
+- All settings persist across sessions
 
 ---
 
@@ -129,7 +158,7 @@ If you find this project useful, **star the repo** to support development!
 
 <div align="center">
 
-**Created by [Rayhan Dzaky Al Mubarok](https://github.com/ZetaGo-Aurum)**  
+**Created by [ZetaGo-Aurum](https://github.com/ZetaGo-Aurum)**  
 *For educational purposes only*
 
 </div>
