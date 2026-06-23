@@ -13,8 +13,8 @@
 
 ### 🔗 Support & Community
 
-<a href="https://trakteer.id/rayhandzaky" target="_blank"><img src="buttons/trakteer_button.svg" alt="Trakteer Tip" width="250"></a>
-<a href="https://t.me/phishgen" target="_blank"><img src="buttons/community_button.svg" alt="Join Community" width="250"></a>
+<a href="https://trakteer.id/Aleocrophic/tip" target="_blank"><img src="buttons/trakteer_button.svg" alt="Trakteer Tip" width="250"></a>
+<a href="https://chat.whatsapp.com/KwTSsF7t5868ERksMPamyQ" target="_blank"><img src="buttons/community_button.svg" alt="Join Community" width="250"></a>
 
 ---
 
