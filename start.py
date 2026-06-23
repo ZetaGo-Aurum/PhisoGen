@@ -900,6 +900,55 @@ class PhishingGenerator:
             console.print(f"[red]{msg}[/]")
             self.server_url = None
 
+    def _install_cloudflared(self):
+        console.print("[yellow]⬇️ cloudflared not found. Installing automatically...[/]")
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        is_termux = bool(os.environ.get('PREFIX'))
+
+        try:
+            if is_termux:
+                console.print("[cyan]⟳ Trying pkg install cloudflared...[/]")
+                result = subprocess.run(["pkg", "install", "cloudflared", "-y"],
+                                        capture_output=True, timeout=180)
+                if result.returncode == 0:
+                    console.print("[green]✓ cloudflared installed via pkg[/]")
+                    return
+                console.print("[yellow]pkg install failed, downloading binary...[/]")
+
+            arch_map = {
+                'x86_64': 'amd64', 'amd64': 'amd64',
+                'aarch64': 'arm64', 'arm64': 'arm64',
+                'armv7l': 'arm', 'arm': 'arm',
+                'i386': '386', 'i686': '386'
+            }
+            arch = arch_map.get(machine, 'amd64')
+            os_name = 'darwin' if system == 'darwin' else 'linux'
+
+            url = f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-{os_name}-{arch}"
+            dest = '/usr/local/bin'
+            if not os.access(dest, os.W_OK):
+                dest = os.path.expanduser('~/.local/bin')
+                os.makedirs(dest, exist_ok=True)
+
+            binary = os.path.join(dest, 'cloudflared')
+            with console.status("[cyan]Downloading cloudflared..."):
+                resp = requests.get(url, timeout=120, stream=True)
+                resp.raise_for_status()
+                with open(binary, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk: f.write(chunk)
+            os.chmod(binary, 0o755)
+
+            os.environ.setdefault('PATH', '')
+            os.environ['PATH'] = dest + os.pathsep + os.environ['PATH']
+            console.print(f"[green]✓ cloudflared installed to {binary}[/]")
+
+        except Exception as e:
+            console.print(f"[red]❌ Auto-install cloudflared failed: {str(e)[:100]}[/]")
+            console.print("[yellow]Manual: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/[/]")
+            raise
+
     def _start_cloudflare(self):
         addr = str(self.server_port)
         if not self.cf_token:
@@ -908,15 +957,7 @@ class PhishingGenerator:
         try:
             subprocess.run(["cloudflared", "version"], capture_output=True, check=True, timeout=10)
         except:
-            console.print("[red]❌ cloudflared not found![/]")
-            is_termux = bool(os.environ.get('PREFIX'))
-            if is_termux:
-                console.print("[yellow]Install: pkg install cloudflared[/]")
-            else:
-                console.print("[yellow]Download from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/[/]")
-            console.input("\n[green]Press Enter after installing cloudflared...[/]")
-            self._start_cloudflare()
-            return
+            self._install_cloudflared()
 
         console.print(f"[cyan]⟳ Starting Cloudflare tunnel...[/]")
         try:

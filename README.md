@@ -96,7 +96,7 @@ pip3 install -r requirements.txt
 
 > **💡 Tip:** If `pip3` is not found, try `pip install -r requirements.txt` instead.
 >
-> **💡 Ngrok binary will be auto-downloaded on first run** — no manual install needed!
+> **💡 Ngrok & cloudflared binaries will be auto-downloaded on first run** — no manual install needed!
 
 ---
 
@@ -107,10 +107,11 @@ python3 start.py
 ```
 
 1. Select language (English / Indonesia)
-2. Enter your **Ngrok Auth Token** (saved to session — only needed once)
-3. Choose attack type from menu
-4. Enter target URL to clone
-5. Send the generated shortened phishing link to target
+2. Select **Tunnel Engine** (Ngrok / Pinggy / Cloudflare)
+3. Enter your **Auth Token** if required (saved to session — only needed once)
+4. Choose attack type from menu
+5. Enter target URL to clone
+6. Send the generated shortened phishing link to target
 
 ### Menu Options
 
@@ -162,16 +163,66 @@ Choose between 3 engines on startup or via Settings:
 | **Cloudflare** | Token (session-saved) | Docker-like, stable |
 
 ### Auto-Install
-Ngrok binary is **automatically downloaded** on first run if not found.  
-Supported: Linux (x86_64, arm64, arm, i386), macOS (Intel & Apple Silicon), Termux (aarch64, arm), Windows (WSL).
+Binaries are **automatically downloaded** on first run if not found:
 
-Pinggy only needs `ssh` (pre-installed on all systems).  
-Cloudflare needs `cloudflared` binary.
+| Binary | Supported Platforms |
+|--------|-------------------|
+| **Ngrok** | Linux (x86_64, arm64, arm, i386), macOS (Intel & Apple Silicon), Termux (aarch64, arm), Windows (WSL) |
+| **Cloudflared** | Linux (x86_64, arm64, arm), macOS (Intel & Apple Silicon), Termux (aarch64, arm) |
+| **Pinggy** | Built-in `ssh` — pre-installed on all systems, no binary needed |
 
 ### Auth Tokens
-- **Ngrok**: Get token at [https://dashboard.ngrok.com](https://dashboard.ngrok.com)
-- **Cloudflare**: Get token from Cloudflare Zero Trust dashboard
-- All tokens stored in `.phishgen_session.json` — only required **once**
+
+#### 🔑 Ngrok Token
+1. Go to [https://dashboard.ngrok.com](https://dashboard.ngrok.com)
+2. Create a free account or log in
+3. Navigate to **Getting Started** → **Your Authtoken**
+4. Copy the token and paste when prompted
+5. Token is saved to `.phishgen_session.json` — only required **once**
+
+#### 🔑 Cloudflare Tunnel Token (Detailed Guide)
+
+> **Cloudflare Tunnel** requires a **token** from Cloudflare Zero Trust.  
+> The token authorizes `cloudflared` to create a secure tunnel to your local server.
+
+**Step-by-step:**
+
+1. **Go to Cloudflare Zero Trust**  
+   Open [https://one.dash.cloudflare.com](https://one.dash.cloudflare.com) and sign in (free account works)
+
+2. **Create a Tunnel**  
+   - Go to **Networks** → **Tunnels** (left sidebar)  
+   - Click **Create a tunnel**  
+   - Choose **Cloudflared** as the connector type  
+   - Name your tunnel (e.g., `phishgen-tunnel`)  
+   - Click **Save tunnel**
+
+3. **Get the Token**  
+   - After saving, you'll see the **Install and run a connector** page  
+   - Look for the `--token` value in the command shown, e.g.:  
+     ```
+     cloudflared tunnel run --token <YOUR_TOKEN_HERE>
+     ```
+   - **Copy the token** (a long alphanumeric string)  
+   - Paste it into PhisoGen when prompted
+
+4. **Create a Public Hostname (Optional but Recommended)**  
+   - Still in the tunnel page, go to the **Public Hostname** tab  
+   - Click **Add a public hostname**  
+   - **Subdomain**: choose any (e.g., `phish`)  
+   - **Domain**: pick a domain you own on Cloudflare  
+   - **Type**: `HTTP`  
+   - **URL**: `localhost:PORT` (same port you set in PhisoGen, default `5000`)  
+   - Click **Save hostname**
+
+5. **Done**  
+   The token is now saved in `.phishgen_session.json` — you only need to do this **once**.
+
+> **⚠️ Note:** The tunnel must be **running** (via PhisoGen) for the public hostname to work.  
+> The auto-generated `*.trycloudflare.com` URL will also work without configuring a domain.
+
+> **💡 Tip:** Tokens are stored in `.phishgen_session.json` in the project directory.  
+> To reset a token, delete this file or use the `Clear Session` option in Settings.
 
 ---
 
