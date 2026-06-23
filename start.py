@@ -1,10 +1,13 @@
 import base64
 import json
 import os
+import platform
 import random
 import string
 import subprocess
+import tarfile
 import time
+import zipfile
 import urllib.parse
 import threading
 import requests
@@ -44,6 +47,10 @@ except Exception as e:
     class NgrokProcess:
         def __init__(self):
             self.process = None
+            self.bin = "ngrok"
+
+        def set_bin(self, path):
+            self.bin = path
 
         def kill(self):
             if self.process:
@@ -55,7 +62,7 @@ except Exception as e:
         def connect(self, addr="5000", **kwargs):
             self.kill()
             self.process = subprocess.Popen(
-                ["ngrok", "http", addr, "--log=stdout"],
+                [self.bin, "http", addr, "--log=stdout"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             time.sleep(4)
@@ -571,6 +578,67 @@ class PhishingGenerator:
                 break
             console.print("[red]Invalid choice! Please select 1 or 2[/]")
 
+    def _check_ngrok(self):
+        try:
+            subprocess.run(["ngrok", "version"], capture_output=True, check=True, timeout=10)
+            return True
+        except:
+            return False
+
+    def install_ngrok(self):
+        console.print("[yellow]⬇️ ngrok not found. Downloading automatically...[/]")
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        is_termux = bool(os.environ.get('PREFIX'))
+
+        arch_map = {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64',
+                     'arm64': 'arm64', 'armv7l': 'arm', 'arm': 'arm', 'i386': '386', 'i686': '386'}
+        arch = arch_map.get(machine, 'amd64')
+
+        if system == 'darwin':
+            os_name, ext = 'darwin', 'tgz'
+        elif system == 'windows' and not is_termux:
+            os_name, ext = 'windows', 'zip'
+        else:
+            os_name, ext = 'linux', 'tgz'
+
+        url = f"https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-{os_name}-{arch}.{ext}"
+        dest = os.environ.get('PREFIX', '/usr/local/bin') if is_termux else '/usr/local/bin'
+        if not os.access(dest, os.W_OK):
+            dest = os.path.expanduser('~/.local/bin')
+            os.makedirs(dest, exist_ok=True)
+
+        try:
+            with console.status(f"[cyan]Downloading ngrok...[/]"):
+                resp = requests.get(url, timeout=120, stream=True)
+                resp.raise_for_status()
+                tarball = f"/tmp/ngrok.{ext}"
+                with open(tarball, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk: f.write(chunk)
+
+            with console.status("[cyan]Extracting ngrok...[/]"):
+                if ext == 'tgz':
+                    with tarfile.open(tarball, 'r:gz') as tar:
+                        tar.extractall(path='/tmp')
+                else:
+                    with zipfile.ZipFile(tarball, 'r') as z:
+                        z.extractall(path='/tmp')
+
+            ngrok_bin = os.path.join(dest, 'ngrok')
+            subprocess.run(["mv", "/tmp/ngrok", ngrok_bin], capture_output=True, check=True)
+            subprocess.run(["chmod", "+x", ngrok_bin], capture_output=True, check=True)
+            os.remove(tarball)
+
+            os.environ.setdefault('PATH', '')
+            os.environ['PATH'] = dest + os.pathsep + os.environ['PATH']
+            ngrok.set_bin(ngrok_bin)
+
+            console.print(f"[green]✓ ngrok installed to {ngrok_bin}[/]")
+        except Exception as e:
+            console.print(f"[red]❌ Auto-install failed: {str(e)[:80]}[/]")
+            console.print("[yellow]Try manual install: https://ngrok.com/download[/]")
+
     def setup_ngrok(self):
         """Setup ngrok tunnel dengan session token"""
         self.clear_screen()
@@ -578,19 +646,11 @@ class PhishingGenerator:
             try:
                 subprocess.run(["ngrok", "version"], capture_output=True, check=True, timeout=10)
             except:
-                console.print("[red]❌ ngrok binary not found![/]")
-                console.print("[yellow]Install ngrok manually: https://ngrok.com/download[/]")
-                if self.language == "id":
-                    console.print("\nUntuk Termux (aarch64/arm64):")
-                    console.print("  wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz")
-                    console.print("  tar xzf ngrok-*.tgz && mv ngrok $PREFIX/bin/")
-                else:
-                    console.print("\nFor Termux (aarch64/arm64):")
-                    console.print("  wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz")
-                    console.print("  tar xzf ngrok-*.tgz && mv ngrok $PREFIX/bin/")
-                console.input("\n[green]Press Enter after installing ngrok...[/]")
-                self.setup_ngrok()
-                return
+                self.install_ngrok()
+                if not self._check_ngrok():
+                    console.print("[red]❌ Failed to install ngrok automatically[/]")
+                    console.input("\n[green]Press Enter to continue...[/]")
+                    return
         try:
             saved_token = self._load_session_token()
             if saved_token:
