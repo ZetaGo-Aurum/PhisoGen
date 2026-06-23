@@ -13,9 +13,8 @@
 
 ### 🔗 Support & Community
 
-<a href="https://trakteer.id/rayhandzaky" target="_blank"><img src="https://img.shields.io/badge/Trakteer-Support%20Me-red?style=for-the-badge&logo=ko-fi" alt="Trakteer"></a>
-<a href="https://github.com/ZetaGo-Aurum" target="_blank"><img src="https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github" alt="GitHub"></a>
-<a href="https://t.me/phishgen" target="_blank"><img src="https://img.shields.io/badge/Telegram-Join%20Community-26A5E4?style=for-the-badge&logo=telegram" alt="Telegram"></a>
+<a href="https://trakteer.id/rayhandzaky" target="_blank"><img src="buttons/trakteer_button.svg" alt="Trakteer Tip" width="250"></a>
+<a href="https://t.me/phishgen" target="_blank"><img src="buttons/community_button.svg" alt="Join Community" width="250"></a>
 
 ---
 
