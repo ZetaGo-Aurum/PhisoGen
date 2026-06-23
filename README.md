@@ -35,7 +35,7 @@
 | 🖥️ **Device Info** | Auto-collect browser/OS/screen fingerprint |
 | 🔗 **URL Shortener** | Auto-shorten links (TinyURL, is.gd, da.gd) |
 | 📱 **QR Code Generator** | Auto-generate QR codes for every link |
-| 🌐 **Ngrok Tunnel** | Secure reverse proxy — custom region & port |
+| 🌐 **Ngrok Tunnel** | Auto-download + auto-setup — custom region & port |
 | 🔄 **Session Persistence** | Token & settings saved — input once, use many |
 | 📢 **Discord Webhook** | Auto-send captured data to Discord channel |
 | 📊 **Real-time Monitor** | Live victim data dashboard |
@@ -93,6 +93,8 @@ pip3 install -r requirements.txt
 ```
 
 > **💡 Tip:** If `pip3` is not found, try `pip install -r requirements.txt` instead.
+>
+> **💡 Ngrok binary will be auto-downloaded on first run** — no manual install needed!
 
 ---
 
@@ -144,8 +146,13 @@ Access via menu option **8**:
 
 ---
 
-## 🔧 Ngrok Auth Token
+## 🔧 Ngrok
 
+### Auto-Install
+ngrok binary is **automatically downloaded** on first run if not found.  
+Supported: Linux (x86_64, arm64, arm, i386), macOS (Intel & Apple Silicon), Termux (aarch64, arm), Windows (WSL).
+
+### Auth Token
 Get your free auth token at: [https://dashboard.ngrok.com](https://dashboard.ngrok.com)
 
 - Token is stored in `.phishgen_session.json` (automatically git-ignored)
