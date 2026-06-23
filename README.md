@@ -46,6 +46,41 @@
 
 ## 📦 Installation
 
+### 1. Install Python 3 & Pip (if not installed)
+
+#### 🐧 Linux (Ubuntu/Debian)
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3 python3-pip git -y
+```
+
+#### 🐧 Linux (Arch)
+```bash
+sudo pacman -S python python-pip git --noconfirm
+```
+
+#### 📱 Android (Termux)
+```bash
+pkg update && pkg upgrade -y
+pkg install python python-pip git -y
+```
+
+#### 🍎 macOS
+```bash
+# Using Homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install python3 git
+```
+
+#### 🪟 Windows (WSL)
+```bash
+# Install WSL first, then open Ubuntu terminal:
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3 python3-pip git -y
+```
+
+### 2. Clone & Install Dependencies
+
 ```bash
 # Clone the repository
 git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
@@ -53,9 +88,11 @@ git clone https://github.com/ZetaGo-Aurum/PhisoGen.git
 # Enter directory
 cd PhisoGen
 
-# Install dependencies
+# Install Python dependencies
 pip3 install -r requirements.txt
 ```
+
+> **💡 Tip:** If `pip3` is not found, try `pip install -r requirements.txt` instead.
 
 ---
 
